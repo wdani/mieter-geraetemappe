@@ -1,0 +1,24 @@
+{
+  "name": "mieter-geraetemappe",
+  "version": "1.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/generate-icons.mjs",
+    "predev": "node scripts/generate-icons.mjs",
+    "dev": "netlify dev",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@netlify/blobs": "latest",
+    "exceljs": "4.4.0",
+    "qrcode": "1.5.4"
+  },
+  "devDependencies": {
+    "@netlify/functions": "latest",
+    "netlify-cli": "latest",
+    "typescript": "latest",
+    "@types/qrcode": "1.5.6",
+    "sharp": "0.34.3"
+  }
+}
