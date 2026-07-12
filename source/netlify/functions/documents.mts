@@ -1,14 +1,21 @@
 import type { Config, Context } from "@netlify/functions";
-import { DOCUMENTS_KEY, getDocumentStore, isAuthorized, type ManualDocument } from "./_shared.mjs";
+import {
+  DOCUMENTS_KEY,
+  getDocumentStore,
+  isAuthorized,
+  normalizeDocument,
+  type ManualDocument
+} from "./_shared.mjs";
 
 const MAX_DOCUMENTS = 2000;
+const MAX_APARTMENTS_PER_DOCUMENT = 30;
 
 const seedDocuments: ManualDocument[] = [
   {
     id: "dropbox-allgemein",
     title: "Alle Dokumente (Dropbox-Ordner)",
     category: "Allgemein",
-    apartment: "Alle Wohnungen",
+    apartments: ["Alle Wohnungen"],
     link: "",
     note: "Hier können allgemeine Hinweise oder ein gemeinsamer Dokumentenordner hinterlegt werden."
   }
@@ -35,17 +42,32 @@ function validateDocuments(value: unknown): ManualDocument[] | null {
     if (!item || typeof item !== "object") return null;
     const source = item as Record<string, unknown>;
 
+    let rawApartments: unknown[];
+    if (Array.isArray(source.apartments)) {
+      rawApartments = source.apartments;
+    } else if (typeof source.apartment === "string") {
+      rawApartments = [source.apartment];
+    } else {
+      rawApartments = [];
+    }
+
+    const apartments = [...new Set(
+      rawApartments
+        .map((itemValue) => cleanString(itemValue, 100))
+        .filter(Boolean)
+    )].slice(0, MAX_APARTMENTS_PER_DOCUMENT);
+
     const document: ManualDocument = {
       id: cleanString(source.id, 100),
       title: cleanString(source.title, 200),
       category: cleanString(source.category, 100),
-      apartment: cleanString(source.apartment, 100),
+      apartments,
       link: cleanString(source.link, 2000),
       note: cleanString(source.note, 1000)
     };
 
     if (!/^[A-Za-z0-9_-]{1,100}$/.test(document.id) || ids.has(document.id)) return null;
-    if (!document.title || !document.category || !document.apartment) return null;
+    if (!document.title || !document.category || document.apartments.length === 0) return null;
     if (!document.link && !document.note) return null;
 
     if (document.link) {
@@ -68,10 +90,21 @@ export default async (request: Request, _context: Context) => {
   const store = getDocumentStore();
 
   if (request.method === "GET") {
-    let documents = await store.get(DOCUMENTS_KEY, { type: "json" }) as ManualDocument[] | null;
+    const rawDocuments = await store.get(DOCUMENTS_KEY, { type: "json" }) as unknown[] | null;
 
-    if (!documents) {
-      documents = seedDocuments;
+    if (!rawDocuments) {
+      await store.setJSON(DOCUMENTS_KEY, seedDocuments);
+      return json({ documents: seedDocuments });
+    }
+
+    const documents = rawDocuments.map(normalizeDocument);
+
+    const migrationNeeded = rawDocuments.some((item) => {
+      if (!item || typeof item !== "object") return true;
+      return !Array.isArray((item as Record<string, unknown>).apartments);
+    });
+
+    if (migrationNeeded) {
       await store.setJSON(DOCUMENTS_KEY, documents);
     }
 
@@ -79,7 +112,9 @@ export default async (request: Request, _context: Context) => {
   }
 
   if (request.method === "PUT") {
-    if (!isAuthorized(request)) return json({ error: "Nicht autorisiert." }, 401);
+    if (!isAuthorized(request)) {
+      return json({ error: "Nicht autorisiert." }, 401);
+    }
 
     let body: unknown;
     try {
@@ -90,7 +125,9 @@ export default async (request: Request, _context: Context) => {
 
     const source = body as { documents?: unknown };
     const documents = validateDocuments(source?.documents);
-    if (!documents) return json({ error: "Die Dokumentliste ist ungültig." }, 400);
+    if (!documents) {
+      return json({ error: "Die Dokumentliste ist ungültig." }, 400);
+    }
 
     await store.setJSON(DOCUMENTS_KEY, documents);
     return json({ documents });
@@ -99,4 +136,6 @@ export default async (request: Request, _context: Context) => {
   return json({ error: "Methode nicht erlaubt." }, 405);
 };
 
-export const config: Config = { path: "/api/documents" };
+export const config: Config = {
+  path: "/api/documents"
+};
