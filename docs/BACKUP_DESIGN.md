@@ -1,23 +1,31 @@
 # Konzept: Datensicherungen
 
-## Inhalt einer Sicherung
+## In Version 1.4 umgesetzt
 
-- Einträge
+Über den Verwaltungsmodus kann ein vollständiges Backup als JSON-Datei heruntergeladen und später wieder importiert werden.
+
+Die Sicherung enthält:
+
+- alle Einträge
+- mehrere beschriftete Links pro Eintrag
 - Kategorien
 - Wohnungen und Bereiche
-- Eintragstypen
-- stabile IDs und QR-Kurzcodes
-- Änderungsverlauf
+- stabile Eintrags-IDs für QR-Codes
 - Schema-Version
+- App-Version
 - Erstellungszeitpunkt
 
-## Geplante Auslöser
+Vor jedem Backup-Import speichert die Serverfunktion den bisherigen Datenstand automatisch als Sicherheitskopie unter `backups/latest-before-import`. Erst danach werden die importierten Daten übernommen.
 
-- regelmässige Sicherung
-- vor Excel- oder JSON-Importen
-- vor einem vollständigen Abgleich
-- vor grösseren Lösch- oder Archivierungsaktionen
-- manuell über die Verwaltung
+Beim Import werden die Einträge validiert. Ungültige IDs, fehlende Pflichtangaben, unsichere Links oder unvollständige Zuordnungen werden abgelehnt. Labels werden nach erfolgreichem Import aus den tatsächlich verwendeten Einträgen neu abgeleitet.
+
+## Noch geplant
+
+- zeitgesteuerte automatische Sicherungen
+- Sicherung vor grösseren Lösch- oder Archivierungsaktionen
+- Liste mehrerer verfügbarer Sicherungsstände
+- Wiederherstellung mit Vergleichsvorschau
+- Änderungsverlauf für Wiederherstellungen
 
 ## Aufbewahrungsvorschlag
 
@@ -25,7 +33,7 @@
 - 12 monatliche Stände
 - Import-Sicherungen mindestens 90 Tage
 
-## Wiederherstellung
+## Spätere Wiederherstellung mit Vorschau
 
 1. Sicherungsstand auswählen.
 2. Unterschiede zum aktuellen Stand anzeigen.
