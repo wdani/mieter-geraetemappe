@@ -31,7 +31,7 @@
 
     <section id="overviewView">
       <div class="toolbar panel">
-        <input id="searchInput" type="search" placeholder="Titel, Kategorie, Wohnung oder Notiz suchen …">
+        <input id="searchInput" type="search" placeholder="Titel, Kategorie, Wohnung, Notiz oder Link suchen …">
         <select id="apartmentFilter" aria-label="Wohnung oder Bereich"><option value="">Alle Bereiche</option></select>
         <select id="categoryFilter" aria-label="Kategorie"><option value="">Alle Kategorien</option></select>
         <button id="addButton" class="button button-primary admin-only" type="button">Eintrag hinzufügen</button>
@@ -39,10 +39,11 @@
 
       <div class="admin-tools panel admin-only">
         <strong>Verwaltung</strong>
+        <button id="labelManagerButton" class="button button-secondary" type="button">Labels verwalten</button>
         <button id="excelButton" class="button button-secondary" type="button">Excel exportieren</button>
-        <button id="jsonExportButton" class="button button-secondary" type="button">JSON sichern</button>
-        <button id="jsonImportButton" class="button button-secondary" type="button">JSON importieren</button>
-        <input id="jsonImportInput" type="file" accept="application/json,.json" hidden>
+        <button id="backupDownloadButton" class="button button-secondary" type="button">Backup herunterladen</button>
+        <button id="backupImportButton" class="button button-secondary" type="button">Backup importieren</button>
+        <input id="backupImportInput" type="file" accept="application/json,.json" hidden>
       </div>
 
       <div class="section-heading">
@@ -72,9 +73,9 @@
         <div id="categoryPicker" class="chip-picker"></div>
         <div class="add-label-row">
           <input id="newCategoryInput" maxlength="100" placeholder="Neues Kategorie-Label, z. B. Küche">
-          <button id="addCategoryButton" class="button button-secondary" type="button">+ Label anlegen</button>
+          <button id="addCategoryButton" class="button button-secondary" type="button">+ Label verwenden</button>
         </div>
-        <p class="hint">Genau eine Kategorie auswählen.</p>
+        <p class="hint">Genau eine Kategorie auswählen. Ein neues Label wird erst beim Speichern des Eintrags übernommen.</p>
       </fieldset>
 
       <fieldset class="picker-fieldset">
@@ -82,14 +83,20 @@
         <div id="apartmentPicker" class="chip-picker"></div>
         <div class="add-label-row">
           <input id="newApartmentInput" maxlength="100" placeholder="Neues Label, z. B. Wohnung 3">
-          <button id="addApartmentButton" class="button button-secondary" type="button">+ Label anlegen</button>
+          <button id="addApartmentButton" class="button button-secondary" type="button">+ Label verwenden</button>
         </div>
-        <p class="hint">Mindestens eine Wohnung oder einen Bereich auswählen.</p>
+        <p class="hint">Mindestens eine Wohnung oder einen Bereich auswählen. Nicht mehr verwendete Labels verschwinden automatisch.</p>
       </fieldset>
 
-      <label>Dokument-Link <span>(optional)</span><input id="linkInput" type="url" maxlength="2000" placeholder="https://…"></label>
+      <fieldset class="picker-fieldset links-fieldset">
+        <legend>Links <span>(optional, mehrere möglich)</span></legend>
+        <div id="linksEditor" class="links-editor"></div>
+        <button id="addLinkButton" class="button button-secondary" type="button">+ Weiteren Link hinzufügen</button>
+        <p class="hint">Beispiele: Anleitung, technische Beschreibung, Herstellerseite oder Video.</p>
+      </fieldset>
+
       <label>Notiz oder Information <span>(optional bei vorhandenem Link)</span><textarea id="noteInput" maxlength="1000" rows="4" placeholder="z. B. Wandfarbe: RAL 9010"></textarea></label>
-      <p class="hint">Mindestens eine Notiz oder ein Dokument-Link muss vorhanden sein.</p>
+      <p class="hint">Mindestens eine Notiz oder ein vollständiger Link muss vorhanden sein.</p>
 
       <div class="secondary-entry-actions">
         <button id="duplicateButton" class="text-button" type="button">Eintrag duplizieren</button>
@@ -102,6 +109,24 @@
         <button class="button button-primary" type="submit">Speichern</button>
       </footer>
     </form>
+  </dialog>
+
+  <dialog id="labelDialog" class="wide-dialog">
+    <header>
+      <div><p class="eyebrow">Verwaltung</p><h2>Labels verwalten</h2></div>
+      <button id="closeLabelManagerButton" class="icon-button" type="button" aria-label="Schliessen">×</button>
+    </header>
+    <div class="label-manager-content">
+      <p class="label-manager-note">Labels werden aus den tatsächlich verwendeten Einträgen abgeleitet. Sobald ein Label nirgends mehr verwendet wird, verschwindet es automatisch aus der Auswahl.</p>
+      <section>
+        <h3>Kategorien</h3>
+        <div id="categoryLabelList" class="managed-label-list"></div>
+      </section>
+      <section>
+        <h3>Wohnungen und Bereiche</h3>
+        <div id="apartmentLabelList" class="managed-label-list"></div>
+      </section>
+    </div>
   </dialog>
 
   <dialog id="loginDialog">

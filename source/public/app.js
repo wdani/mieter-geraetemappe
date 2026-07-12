@@ -2,6 +2,8 @@ const API_URL = "/api/documents";
 const LABELS_URL = "/api/labels";
 const EXCEL_URL = "/api/export.xlsx";
 const QR_URL = "/api/qr";
+const BACKUP_URL = "/api/backup";
+const MAX_LINKS = 12;
 
 let documents = [];
 let labels = { categories: [], apartments: [] };
@@ -11,6 +13,8 @@ let isAdmin = false;
 let activeQrId = null;
 let selectedCategory = "";
 let selectedApartments = new Set();
+let draftCategoryLabels = new Set();
+let draftApartmentLabels = new Set();
 
 const $ = (selector) => document.querySelector(selector);
 const entryGrid = $("#entryGrid");
@@ -19,6 +23,7 @@ const detailView = $("#detailView");
 const entryDialog = $("#entryDialog");
 const loginDialog = $("#loginDialog");
 const qrDialog = $("#qrDialog");
+const labelDialog = $("#labelDialog");
 
 function escapeHtml(value) {
   const element = document.createElement("div");
@@ -37,18 +42,48 @@ function unique(values) {
   return [...seen.values()].sort((a, b) => a.localeCompare(b, "de"));
 }
 
+function sameLabel(left, right) {
+  return String(left || "").trim().toLocaleLowerCase("de") === String(right || "").trim().toLocaleLowerCase("de");
+}
+
 function getApartments(entry) {
   if (Array.isArray(entry?.apartments)) return unique(entry.apartments);
   if (typeof entry?.apartment === "string" && entry.apartment.trim()) return [entry.apartment.trim()];
   return [];
 }
 
+function getLinks(entry) {
+  if (Array.isArray(entry?.links)) {
+    return entry.links
+      .filter((link) => link && typeof link.url === "string" && link.url.trim())
+      .map((link) => ({
+        label: typeof link.label === "string" && link.label.trim() ? link.label.trim() : "Dokument",
+        url: link.url.trim()
+      }))
+      .slice(0, MAX_LINKS);
+  }
+  if (typeof entry?.link === "string" && entry.link.trim()) {
+    return [{ label: "Dokument", url: entry.link.trim() }];
+  }
+  return [];
+}
+
 function allCategoryLabels() {
-  return unique([...(labels.categories || []), ...documents.map((entry) => entry.category)]);
+  const dialogValues = entryDialog?.open ? [...draftCategoryLabels, selectedCategory] : [];
+  return unique([
+    ...(labels.categories || []),
+    ...documents.map((entry) => entry.category),
+    ...dialogValues
+  ]);
 }
 
 function allApartmentLabels() {
-  return unique([...(labels.apartments || []), ...documents.flatMap(getApartments)]);
+  const dialogValues = entryDialog?.open ? [...draftApartmentLabels, ...selectedApartments] : [];
+  return unique([
+    ...(labels.apartments || []),
+    ...documents.flatMap(getApartments),
+    ...dialogValues
+  ]);
 }
 
 function createId() {
@@ -85,7 +120,9 @@ function directLink(value) {
 
 function noteFor(entry) {
   if (entry.note) return entry.note;
-  if (entry.link) return "Dokument direkt über den hinterlegten Link öffnen.";
+  const linkCount = getLinks(entry).length;
+  if (linkCount === 1) return "Ein hinterlegter Link ist verfügbar.";
+  if (linkCount > 1) return `${linkCount} hinterlegte Links sind verfügbar.`;
   return "Keine zusätzliche Information hinterlegt.";
 }
 
@@ -119,13 +156,18 @@ async function loadLabels() {
 async function loadDocuments() {
   setStatus("Einträge werden geladen …");
   try {
-    const [response] = await Promise.all([
-      fetch(API_URL, { cache: "no-store" }),
-      loadLabels()
-    ]);
+    const response = await fetch(API_URL, { cache: "no-store" });
     if (!response.ok) throw new Error(`Laden fehlgeschlagen (${response.status})`);
     const payload = await response.json();
     documents = Array.isArray(payload.documents) ? payload.documents : [];
+    if (payload.labels) {
+      labels = {
+        categories: Array.isArray(payload.labels.categories) ? payload.labels.categories : [],
+        apartments: Array.isArray(payload.labels.apartments) ? payload.labels.apartments : []
+      };
+    } else {
+      await loadLabels();
+    }
     setStatus("");
   } catch (error) {
     console.error(error);
@@ -159,30 +201,15 @@ async function saveDocuments(nextDocuments) {
   if (!response.ok) throw new Error(payload.error || `Speichern fehlgeschlagen (${response.status})`);
 
   documents = Array.isArray(payload.documents) ? payload.documents : nextDocuments;
-}
-
-async function saveLabels(nextLabels) {
-  const response = await fetch(LABELS_URL, {
-    method: "PUT",
-    headers: {
-      "content-type": "application/json",
-      "x-admin-password": adminPassword
-    },
-    body: JSON.stringify(nextLabels)
-  });
-
-  let payload = {};
-  try {
-    payload = await response.json();
-  } catch {}
-
-  if (response.status === 401) throw new Error("Das Verwaltungspasswort ist nicht korrekt.");
-  if (!response.ok) throw new Error(payload.error || `Labels konnten nicht gespeichert werden (${response.status})`);
-
-  labels = {
-    categories: Array.isArray(payload.categories) ? payload.categories : nextLabels.categories,
-    apartments: Array.isArray(payload.apartments) ? payload.apartments : nextLabels.apartments
-  };
+  labels = payload.labels && typeof payload.labels === "object"
+    ? {
+        categories: Array.isArray(payload.labels.categories) ? payload.labels.categories : [],
+        apartments: Array.isArray(payload.labels.apartments) ? payload.labels.apartments : []
+      }
+    : {
+        categories: unique(documents.map((entry) => entry.category)),
+        apartments: unique(documents.flatMap(getApartments))
+      };
 }
 
 function renderFilters() {
@@ -209,11 +236,31 @@ function filteredDocuments() {
 
   return documents.filter((entry) => {
     const apartments = getApartments(entry);
-    const text = [entry.title, entry.category, ...apartments, entry.note].join(" ").toLocaleLowerCase("de");
+    const links = getLinks(entry);
+    const text = [
+      entry.title,
+      entry.category,
+      ...apartments,
+      entry.note,
+      ...links.flatMap((link) => [link.label, link.url])
+    ].join(" ").toLocaleLowerCase("de");
+
     return (!query || text.includes(query)) &&
       (!apartment || apartments.includes(apartment)) &&
       (!category || entry.category === category);
   });
+}
+
+function cardPrimaryAction(entry) {
+  const links = getLinks(entry);
+  if (links.length === 1) {
+    const link = links[0];
+    return `<a class="button button-primary" href="${escapeHtml(directLink(link.url))}" target="_blank" rel="noopener noreferrer">${escapeHtml(link.label)}</a>`;
+  }
+  if (links.length > 1) {
+    return `<button class="button button-primary" type="button" data-detail="${escapeHtml(entry.id)}">${links.length} Links anzeigen</button>`;
+  }
+  return `<button class="button button-primary" type="button" data-detail="${escapeHtml(entry.id)}">Information öffnen</button>`;
 }
 
 function renderGrid() {
@@ -239,7 +286,7 @@ function renderGrid() {
         <h3>${escapeHtml(entry.title)}</h3>
         <p>${escapeHtml(noteFor(entry))}</p>
         <footer>
-          ${entry.link ? `<a class="button button-primary" href="${escapeHtml(directLink(entry.link))}" target="_blank" rel="noopener noreferrer">Dokument öffnen</a>` : `<button class="button button-primary" type="button" data-detail="${escapeHtml(entry.id)}">Information öffnen</button>`}
+          ${cardPrimaryAction(entry)}
           <button class="qr-button admin-only" type="button" data-qr="${escapeHtml(entry.id)}">QR</button>
         </footer>
       </article>
@@ -271,6 +318,10 @@ function renderDetail() {
   const apartmentTags = getApartments(entry)
     .map((value) => `<span class="tag">${escapeHtml(value)}</span>`)
     .join("");
+  const links = getLinks(entry);
+  const linkButtons = links.map((link, index) => `
+    <a class="button ${index === 0 ? "button-primary" : "button-secondary"}" href="${escapeHtml(directLink(link.url))}" target="_blank" rel="noopener noreferrer">${escapeHtml(link.label)}</a>
+  `).join("");
 
   document.title = `${entry.title} · Gerätemappe`;
   $("#detailCard").innerHTML = `
@@ -278,7 +329,7 @@ function renderDetail() {
     <h1>${escapeHtml(entry.title)}</h1>
     <p>${escapeHtml(noteFor(entry))}</p>
     <div class="detail-actions">
-      ${entry.link ? `<a class="button button-primary" href="${escapeHtml(directLink(entry.link))}" target="_blank" rel="noopener noreferrer">Dokument öffnen</a>` : ""}
+      ${linkButtons}
       <button class="button button-secondary admin-only" type="button" data-detail-qr="${escapeHtml(entry.id)}">QR-Code anzeigen</button>
     </div>
   `;
@@ -307,7 +358,7 @@ function renderCategoryPicker() {
   }
 
   container.innerHTML = values.map((value) => `
-    <button class="picker-chip ${value === selectedCategory ? "active" : ""}" type="button" data-category="${encodeURIComponent(value)}">${escapeHtml(value)}</button>
+    <button class="picker-chip ${sameLabel(value, selectedCategory) ? "active" : ""}" type="button" data-category="${encodeURIComponent(value)}">${escapeHtml(value)}</button>
   `).join("");
 
   container.querySelectorAll("[data-category]").forEach((button) => {
@@ -328,75 +379,94 @@ function renderApartmentPicker() {
   }
 
   container.innerHTML = values.map((value) => `
-    <button class="picker-chip ${selectedApartments.has(value) ? "active" : ""}" type="button" data-apartment="${encodeURIComponent(value)}">${escapeHtml(value)}</button>
+    <button class="picker-chip ${[...selectedApartments].some((selected) => sameLabel(selected, value)) ? "active" : ""}" type="button" data-apartment="${encodeURIComponent(value)}">${escapeHtml(value)}</button>
   `).join("");
 
   container.querySelectorAll("[data-apartment]").forEach((button) => {
     button.addEventListener("click", () => {
       const value = decodeURIComponent(button.dataset.apartment);
-      if (selectedApartments.has(value)) selectedApartments.delete(value);
+      const existing = [...selectedApartments].find((selected) => sameLabel(selected, value));
+      if (existing) selectedApartments.delete(existing);
       else selectedApartments.add(value);
       renderApartmentPicker();
     });
   });
 }
 
-async function addCategoryLabel() {
+function addCategoryLabel() {
   const input = $("#newCategoryInput");
   const value = input.value.trim();
   if (!value) return;
 
-  const existing = allCategoryLabels().find((item) => item.toLocaleLowerCase("de") === value.toLocaleLowerCase("de"));
-  if (existing) {
-    selectedCategory = existing;
-    input.value = "";
-    renderCategoryPicker();
-    return;
-  }
-
-  const nextLabels = {
-    categories: unique([...(labels.categories || []), value]),
-    apartments: labels.apartments || []
-  };
-
-  try {
-    await saveLabels(nextLabels);
-    selectedCategory = value;
-    input.value = "";
-    renderCategoryPicker();
-    setStatus("Kategorie-Label gespeichert.");
-  } catch (error) {
-    alert(error.message);
-  }
+  const existing = allCategoryLabels().find((item) => sameLabel(item, value));
+  selectedCategory = existing || value;
+  if (!existing) draftCategoryLabels.add(value);
+  input.value = "";
+  renderCategoryPicker();
 }
 
-async function addApartmentLabel() {
+function addApartmentLabel() {
   const input = $("#newApartmentInput");
   const value = input.value.trim();
   if (!value) return;
 
-  const existing = allApartmentLabels().find((item) => item.toLocaleLowerCase("de") === value.toLocaleLowerCase("de"));
-  if (existing) {
-    selectedApartments.add(existing);
-    input.value = "";
-    renderApartmentPicker();
+  const existing = allApartmentLabels().find((item) => sameLabel(item, value));
+  const selected = existing || value;
+  selectedApartments.add(selected);
+  if (!existing) draftApartmentLabels.add(value);
+  input.value = "";
+  renderApartmentPicker();
+}
+
+function addLinkRow(link = { label: "", url: "" }) {
+  const container = $("#linksEditor");
+  if (container.children.length >= MAX_LINKS) {
+    alert(`Pro Eintrag sind maximal ${MAX_LINKS} Links möglich.`);
     return;
   }
 
-  const nextLabels = {
-    categories: labels.categories || [],
-    apartments: unique([...(labels.apartments || []), value])
-  };
+  const row = document.createElement("div");
+  row.className = "link-editor-row";
+  row.innerHTML = `
+    <input class="link-label-input" maxlength="100" placeholder="Bezeichnung, z. B. Anleitung" value="${escapeHtml(link.label || "")}">
+    <input class="link-url-input" type="url" maxlength="2000" placeholder="https://…" value="${escapeHtml(link.url || "")}">
+    <button class="link-remove-button" type="button" aria-label="Link entfernen">×</button>
+  `;
+  row.querySelector(".link-remove-button").addEventListener("click", () => {
+    row.remove();
+    if (!container.children.length) addLinkRow();
+  });
+  container.appendChild(row);
+}
 
-  try {
-    await saveLabels(nextLabels);
-    selectedApartments.add(value);
-    input.value = "";
-    renderApartmentPicker();
-    setStatus("Wohnungs-/Bereichs-Label gespeichert.");
-  } catch (error) {
-    alert(error.message);
+function renderLinkEditor(links) {
+  const container = $("#linksEditor");
+  container.innerHTML = "";
+  const values = links.length ? links : [{ label: "", url: "" }];
+  values.forEach((link) => addLinkRow(link));
+}
+
+function collectEditedLinks() {
+  const rows = [...$("#linksEditor").querySelectorAll(".link-editor-row")];
+  const result = [];
+
+  for (const [index, row] of rows.entries()) {
+    const label = row.querySelector(".link-label-input").value.trim();
+    const url = row.querySelector(".link-url-input").value.trim();
+    if (!label && !url) continue;
+    if (!label || !url) {
+      throw new Error(`Beim Link ${index + 1} müssen Bezeichnung und URL ausgefüllt sein.`);
+    }
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== "https:") throw new Error();
+    } catch {
+      throw new Error(`Der Link „${label}“ muss mit https:// beginnen.`);
+    }
+    result.push({ label, url });
   }
+
+  return result;
 }
 
 function openEntryDialog(id = null) {
@@ -404,9 +474,10 @@ function openEntryDialog(id = null) {
   editingId = id;
   const entry = id ? documents.find((item) => item.id === id) : null;
 
+  draftCategoryLabels = new Set();
+  draftApartmentLabels = new Set();
   $("#entryDialogTitle").textContent = entry ? "Eintrag bearbeiten" : "Eintrag hinzufügen";
   $("#titleInput").value = entry?.title || "";
-  $("#linkInput").value = entry?.link || "";
   $("#noteInput").value = entry?.note || "";
   selectedCategory = entry?.category || "";
   selectedApartments = new Set(entry ? getApartments(entry) : []);
@@ -416,6 +487,7 @@ function openEntryDialog(id = null) {
   $("#newApartmentInput").value = "";
   renderCategoryPicker();
   renderApartmentPicker();
+  renderLinkEditor(entry ? getLinks(entry) : []);
   entryDialog.showModal();
 }
 
@@ -427,7 +499,6 @@ function duplicateEntry() {
   editingId = null;
   $("#entryDialogTitle").textContent = "Eintrag hinzufügen (Kopie)";
   $("#titleInput").value = `${original.title} (Kopie)`;
-  $("#linkInput").value = original.link || "";
   $("#noteInput").value = original.note || "";
   selectedCategory = original.category;
   selectedApartments = new Set(getApartments(original));
@@ -435,6 +506,7 @@ function duplicateEntry() {
   $("#duplicateButton").hidden = true;
   renderCategoryPicker();
   renderApartmentPicker();
+  renderLinkEditor(getLinks(original));
   $("#titleInput").focus();
 }
 
@@ -443,45 +515,32 @@ async function submitEntry(event) {
   if (event.submitter?.value === "cancel") {
     entryDialog.close();
     editingId = null;
+    draftCategoryLabels.clear();
+    draftApartmentLabels.clear();
     return;
   }
 
-  const link = $("#linkInput").value.trim();
   const note = $("#noteInput").value.trim();
   const title = $("#titleInput").value.trim();
+  let links;
+  try {
+    links = collectEditedLinks();
+  } catch (error) {
+    alert(error.message);
+    return;
+  }
 
-  if (!title) {
-    alert("Bitte einen Titel eintragen.");
-    return;
-  }
-  if (!selectedCategory) {
-    alert("Bitte eine Kategorie auswählen oder anlegen.");
-    return;
-  }
-  if (!selectedApartments.size) {
-    alert("Bitte mindestens eine Wohnung oder einen Bereich auswählen.");
-    return;
-  }
-  if (!link && !note) {
-    alert("Bitte eine Notiz oder einen Dokument-Link eintragen.");
-    return;
-  }
-  if (link) {
-    try {
-      const url = new URL(link);
-      if (url.protocol !== "https:") throw new Error();
-    } catch {
-      alert("Der Dokument-Link muss mit https:// beginnen.");
-      return;
-    }
-  }
+  if (!title) return alert("Bitte einen Titel eintragen.");
+  if (!selectedCategory) return alert("Bitte eine Kategorie auswählen oder anlegen.");
+  if (!selectedApartments.size) return alert("Bitte mindestens eine Wohnung oder einen Bereich auswählen.");
+  if (!links.length && !note) return alert("Bitte eine Notiz oder mindestens einen Link eintragen.");
 
   const entry = {
     id: editingId || createId(),
     title,
     category: selectedCategory,
     apartments: [...selectedApartments],
-    link,
+    links,
     note
   };
   const next = editingId
@@ -492,7 +551,9 @@ async function submitEntry(event) {
     await saveDocuments(next);
     entryDialog.close();
     editingId = null;
-    setStatus("Eintrag gespeichert.");
+    draftCategoryLabels.clear();
+    draftApartmentLabels.clear();
+    setStatus("Eintrag gespeichert. Nicht mehr verwendete Labels wurden automatisch bereinigt.");
     render();
   } catch (error) {
     alert(error.message);
@@ -505,8 +566,151 @@ async function deleteEntry() {
     await saveDocuments(documents.filter((item) => item.id !== editingId));
     entryDialog.close();
     editingId = null;
-    setStatus("Eintrag gelöscht.");
+    setStatus("Eintrag gelöscht. Nicht mehr verwendete Labels wurden automatisch entfernt.");
     render();
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+function categoryUsage(label) {
+  return documents.filter((entry) => sameLabel(entry.category, label)).length;
+}
+
+function apartmentUsage(label) {
+  return documents.filter((entry) => getApartments(entry).some((value) => sameLabel(value, label))).length;
+}
+
+function renderManagedLabelList(type) {
+  const isCategory = type === "category";
+  const values = isCategory ? allCategoryLabels() : allApartmentLabels();
+  const container = isCategory ? $("#categoryLabelList") : $("#apartmentLabelList");
+
+  if (!values.length) {
+    container.innerHTML = '<p class="picker-empty">Keine verwendeten Labels vorhanden.</p>';
+    return;
+  }
+
+  container.innerHTML = values.map((label) => {
+    const usage = isCategory ? categoryUsage(label) : apartmentUsage(label);
+    return `
+      <div class="managed-label-row">
+        <div><strong>${escapeHtml(label)}</strong><small>${usage} ${usage === 1 ? "Eintrag" : "Einträge"}</small></div>
+        <div class="managed-label-actions">
+          <button class="button button-secondary" type="button" data-rename-label="${encodeURIComponent(label)}" data-label-type="${type}">Umbenennen</button>
+          <button class="button button-danger" type="button" data-delete-label="${encodeURIComponent(label)}" data-label-type="${type}">Löschen</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  container.querySelectorAll("[data-rename-label]").forEach((button) => {
+    button.addEventListener("click", () => renameLabel(button.dataset.labelType, decodeURIComponent(button.dataset.renameLabel)));
+  });
+  container.querySelectorAll("[data-delete-label]").forEach((button) => {
+    button.addEventListener("click", () => deleteLabel(button.dataset.labelType, decodeURIComponent(button.dataset.deleteLabel)));
+  });
+}
+
+function renderLabelManager() {
+  renderManagedLabelList("category");
+  renderManagedLabelList("apartment");
+}
+
+function openLabelManager() {
+  if (!isAdmin) return;
+  renderLabelManager();
+  labelDialog.showModal();
+}
+
+async function renameLabel(type, oldLabel) {
+  const newLabel = prompt(`„${oldLabel}“ umbenennen in:`, oldLabel)?.trim();
+  if (!newLabel || newLabel === oldLabel) return;
+  if (newLabel.length > 100) return alert("Ein Label darf höchstens 100 Zeichen lang sein.");
+
+  const existing = (type === "category" ? allCategoryLabels() : allApartmentLabels())
+    .find((value) => sameLabel(value, newLabel) && !sameLabel(value, oldLabel));
+  if (existing && !confirm(`Das Label „${existing}“ existiert bereits. Beide Labels zusammenführen?`)) return;
+  const target = existing || newLabel;
+
+  const next = documents.map((entry) => {
+    if (type === "category") {
+      return sameLabel(entry.category, oldLabel) ? { ...entry, category: target } : entry;
+    }
+    const apartments = unique(getApartments(entry).map((value) => sameLabel(value, oldLabel) ? target : value));
+    return { ...entry, apartments };
+  });
+
+  try {
+    await saveDocuments(next);
+    render();
+    renderLabelManager();
+    setStatus(`Label „${oldLabel}“ wurde in „${target}“ umbenannt.`);
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+async function deleteLabel(type, label) {
+  if (type === "category") {
+    const affected = categoryUsage(label);
+    const alternatives = allCategoryLabels().filter((value) => !sameLabel(value, label));
+    if (!affected) {
+      await loadLabels();
+      renderLabelManager();
+      return;
+    }
+
+    const suggestion = alternatives[0] || "Allgemein";
+    const replacement = prompt(
+      `Das Kategorie-Label „${label}“ wird noch von ${affected} Einträgen verwendet.\n\nBitte ein Ersatz-Label eingeben:`,
+      suggestion
+    )?.trim();
+    if (!replacement || sameLabel(replacement, label)) return;
+    if (!confirm(`„${label}“ löschen und die betroffenen Einträge „${replacement}“ zuordnen?`)) return;
+
+    try {
+      await saveDocuments(documents.map((entry) => sameLabel(entry.category, label) ? { ...entry, category: replacement } : entry));
+      render();
+      renderLabelManager();
+      setStatus(`Kategorie „${label}“ wurde gelöscht und durch „${replacement}“ ersetzt.`);
+    } catch (error) {
+      alert(error.message);
+    }
+    return;
+  }
+
+  const affectedEntries = documents.filter((entry) => getApartments(entry).some((value) => sameLabel(value, label)));
+  if (!affectedEntries.length) {
+    await loadLabels();
+    renderLabelManager();
+    return;
+  }
+
+  const orphaned = affectedEntries.filter((entry) => getApartments(entry).filter((value) => !sameLabel(value, label)).length === 0);
+  let replacement = "";
+  if (orphaned.length) {
+    const alternatives = allApartmentLabels().filter((value) => !sameLabel(value, label));
+    replacement = prompt(
+      `${orphaned.length} Einträge hätten danach keine Wohnung oder keinen Bereich mehr.\n\nBitte ein Ersatz-Label eingeben:`,
+      alternatives[0] || "Alle Wohnungen"
+    )?.trim() || "";
+    if (!replacement || sameLabel(replacement, label)) return;
+  }
+
+  if (!confirm(`Das Label „${label}“ aus ${affectedEntries.length} Einträgen entfernen?`)) return;
+
+  const next = documents.map((entry) => {
+    let apartments = getApartments(entry).filter((value) => !sameLabel(value, label));
+    if (!apartments.length && replacement) apartments = [replacement];
+    return { ...entry, apartments };
+  });
+
+  try {
+    await saveDocuments(next);
+    render();
+    renderLabelManager();
+    setStatus(`Wohnungs-/Bereichs-Label „${label}“ wurde gelöscht.`);
   } catch (error) {
     alert(error.message);
   }
@@ -571,7 +775,9 @@ function downloadBlob(blob, filename) {
   const link = document.createElement("a");
   link.href = url;
   link.download = filename;
+  document.body.appendChild(link);
   link.click();
+  link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
@@ -587,43 +793,71 @@ async function exportExcel() {
   );
 }
 
-function exportJson() {
-  const payload = {
-    version: 2,
-    exportedAt: new Date().toISOString(),
-    labels,
-    documents
-  };
-  downloadBlob(
-    new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }),
-    `Geraetemappe-Sicherung-${new Date().toISOString().slice(0, 10)}.json`
-  );
+async function downloadBackup() {
+  const response = await fetch(BACKUP_URL, {
+    method: "GET",
+    headers: { "x-admin-password": adminPassword },
+    cache: "no-store"
+  });
+  if (!response.ok) throw new Error("Backup konnte nicht heruntergeladen werden.");
+
+  const disposition = response.headers.get("content-disposition") || "";
+  const filename = disposition.match(/filename="([^"]+)"/)?.[1]
+    || `Geraetemappe-Backup-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
+  downloadBlob(await response.blob(), filename);
+  setStatus("Backup wurde heruntergeladen.");
 }
 
-async function importJson(file) {
+async function importBackup(file) {
   if (!file) return;
   try {
     const payload = JSON.parse(await file.text());
-    const imported = Array.isArray(payload) ? payload : payload.documents;
-    if (!Array.isArray(imported)) throw new Error("Ungültige Sicherungsdatei.");
-    if (!confirm(`${imported.length} Einträge importieren und die aktuelle Liste ersetzen?`)) return;
+    const importedDocuments = Array.isArray(payload) ? payload : payload?.documents;
+    if (!Array.isArray(importedDocuments)) throw new Error("Die Datei enthält kein gültiges Gerätemappe-Backup.");
 
-    if (payload.labels && typeof payload.labels === "object") {
-      await saveLabels({
-        categories: Array.isArray(payload.labels.categories) ? payload.labels.categories : [],
-        apartments: Array.isArray(payload.labels.apartments) ? payload.labels.apartments : []
-      });
-    }
+    const linkCount = importedDocuments.reduce((sum, entry) => sum + getLinks(entry).length, 0);
+    const categories = unique(importedDocuments.map((entry) => entry?.category));
+    const apartments = unique(importedDocuments.flatMap(getApartments));
+    const confirmed = confirm(
+      `Backup importieren?\n\n` +
+      `${importedDocuments.length} Einträge\n` +
+      `${linkCount} Links\n` +
+      `${categories.length} Kategorien\n` +
+      `${apartments.length} Wohnungen/Bereiche\n\n` +
+      `Der aktuelle Datenstand wird davor automatisch als Sicherheitskopie gespeichert.`
+    );
+    if (!confirmed) return;
 
-    await saveDocuments(imported);
+    const response = await fetch(BACKUP_URL, {
+      method: "PUT",
+      headers: {
+        "content-type": "application/json",
+        "x-admin-password": adminPassword
+      },
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "Backup-Import fehlgeschlagen.");
+
+    documents = Array.isArray(result.documents) ? result.documents : importedDocuments;
+    labels = result.labels || {
+      categories: unique(documents.map((entry) => entry.category)),
+      apartments: unique(documents.flatMap(getApartments))
+    };
     render();
-    setStatus("JSON-Sicherung importiert.");
+    setStatus(`Backup mit ${documents.length} Einträgen importiert. Sicherheitskopie wurde erstellt.`);
   } catch (error) {
     alert(error.message);
   } finally {
-    $("#jsonImportInput").value = "";
+    $("#backupImportInput").value = "";
   }
 }
+
+entryDialog.addEventListener("close", () => {
+  editingId = null;
+  draftCategoryLabels.clear();
+  draftApartmentLabels.clear();
+});
 
 $("#searchInput").addEventListener("input", renderGrid);
 $("#apartmentFilter").addEventListener("change", renderGrid);
@@ -635,6 +869,7 @@ $("#deleteButton").addEventListener("click", deleteEntry);
 $("#duplicateButton").addEventListener("click", duplicateEntry);
 $("#addCategoryButton").addEventListener("click", addCategoryLabel);
 $("#addApartmentButton").addEventListener("click", addApartmentLabel);
+$("#addLinkButton").addEventListener("click", () => addLinkRow());
 $("#newCategoryInput").addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     event.preventDefault();
@@ -647,6 +882,8 @@ $("#newApartmentInput").addEventListener("keydown", (event) => {
     addApartmentLabel();
   }
 });
+$("#labelManagerButton").addEventListener("click", openLabelManager);
+$("#closeLabelManagerButton").addEventListener("click", () => labelDialog.close());
 $("#loginForm").addEventListener("submit", login);
 $("#backButton").addEventListener("click", () => {
   history.pushState({}, "", "/");
@@ -656,9 +893,9 @@ $("#backButton").addEventListener("click", () => {
 $("#qrCloseButton").addEventListener("click", () => qrDialog.close());
 $("#copyQrButton").addEventListener("click", copyQrLink);
 $("#excelButton").addEventListener("click", () => exportExcel().catch((error) => alert(error.message)));
-$("#jsonExportButton").addEventListener("click", exportJson);
-$("#jsonImportButton").addEventListener("click", () => $("#jsonImportInput").click());
-$("#jsonImportInput").addEventListener("change", (event) => importJson(event.target.files?.[0]));
+$("#backupDownloadButton").addEventListener("click", () => downloadBackup().catch((error) => alert(error.message)));
+$("#backupImportButton").addEventListener("click", () => $("#backupImportInput").click());
+$("#backupImportInput").addEventListener("change", (event) => importBackup(event.target.files?.[0]));
 window.addEventListener("popstate", renderDetail);
 
 if ("serviceWorker" in navigator) {

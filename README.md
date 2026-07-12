@@ -2,7 +2,7 @@
 
 Digitale Informationsmappe für Mietwohnungen und Liegenschaften. Sie verwaltet datenschutzfreundliche Inhalte wie Geräteanleitungen, Farb- und Materialangaben, Pflegehinweise, technische Informationen und allgemeine Kontakte.
 
-## Aktueller Stand: Version 1.3.0
+## Aktueller Stand: Version 1.4.0
 
 - zentrale Eintragsliste über Netlify Blobs
 - geschützte Verwaltung über `ADMIN_PASSWORD`
@@ -10,12 +10,15 @@ Digitale Informationsmappe für Mietwohnungen und Liegenschaften. Sie verwaltet 
 - dauerhafte Detailseiten unter `/d/<ID>`
 - QR-Code-Vorschau und PNG-Download pro Eintrag
 - Excel-Export als `.xlsx`
-- JSON-Export und JSON-Import
-- Dokument-Link optional
-- reine Notiz- und Informationseinträge möglich
+- vollständiger Backup-Download und Backup-Import als JSON
+- automatische Sicherheitskopie vor jedem Backup-Import
+- reine Notiz- und Informationseinträge ohne externen Link
+- mehrere beschriftete Links pro Eintrag, etwa Anleitung, technische Beschreibung oder Video
 - verwaltbare Kategorie- und Wohnungs-/Bereichs-Labels
+- Labels können umbenannt oder kontrolliert gelöscht werden
+- nicht mehr verwendete Labels verschwinden automatisch aus der Auswahl
 - Zuordnung eines Eintrags zu mehreren Wohnungen oder Bereichen
-- automatische Übernahme älterer Einträge mit einem einzelnen `apartment`-Feld
+- automatische Migration älterer Einträge mit den Feldern `apartment` und `link`
 - Einträge können im Verwaltungsmodus dupliziert werden
 
 ## Datenprinzip
@@ -28,8 +31,10 @@ Ein Eintrag kann beispielsweise enthalten:
 - Kategorie
 - eine oder mehrere Wohnungen beziehungsweise Bereiche
 - Notiz oder Information
-- optionalen Dokument-Link
+- optional mehrere beschriftete HTTPS-Links
 - stabile ID für QR-Codes
+
+Labels werden nicht dauerhaft als ungenutzte Auswahlliste geführt. Die Anwendung leitet die verfügbaren Kategorien und Wohnungen/Bereiche aus den tatsächlich gespeicherten Einträgen ab. Wird ein Label nirgends mehr verwendet, wird es beim nächsten Speichern automatisch entfernt.
 
 ## Projektstruktur
 
@@ -80,7 +85,7 @@ Neue QR-Codes verlinken nicht direkt auf einen externen Dokumentenspeicher, sond
 /d/<ID>
 ```
 
-Der externe Dokument-Link kann später geändert werden, ohne den gedruckten QR-Code ersetzen zu müssen. Reine Informationseinträge funktionieren ebenfalls ohne externen Link.
+Die dort hinterlegten Links können später geändert oder erweitert werden, ohne den gedruckten QR-Code ersetzen zu müssen. Reine Informationseinträge funktionieren ebenfalls ohne externen Link.
 
 ## Weiterentwicklung
 
