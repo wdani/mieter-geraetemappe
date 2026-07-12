@@ -22,7 +22,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
 
       - name: Generate deployable project tree
         run: node bootstrap.mjs
