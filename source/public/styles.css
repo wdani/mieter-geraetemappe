@@ -161,3 +161,21 @@ dialog footer, dialog form > footer { display: flex; align-items: center; gap: 1
   .managed-label-actions .button { flex: 1; }
   .wide-dialog { padding: 18px; }
 }
+
+.app-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 18px 2px calc(24px + env(safe-area-inset-bottom));
+  color: var(--muted);
+  font-size: .82rem;
+}
+
+.app-version {
+  font-variant-numeric: tabular-nums;
+  font-weight: 750;
+}
+

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.1
+
+- Dropbox-Freigabelinks verwenden `raw=1`, damit unterstützte Dokumente direkt im Browser geöffnet werden und die Dropbox-Zwischenseite möglichst umgangen wird.
+- Die geladene App-Version wird dauerhaft im Footer angezeigt.
+- PWA-Cache für den Fix erneuert.
+
 ## 1.4.0
 
 - Ein Eintrag kann mehrere beschriftete HTTPS-Links enthalten, beispielsweise Anleitung, technische Beschreibung, Herstellerseite oder Video.

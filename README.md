@@ -2,7 +2,7 @@
 
 Digitale Informationsmappe für Mietwohnungen und Liegenschaften. Sie verwaltet datenschutzfreundliche Inhalte wie Geräteanleitungen, Farb- und Materialangaben, Pflegehinweise, technische Informationen und allgemeine Kontakte.
 
-## Aktueller Stand: Version 1.4.0
+## Aktueller Stand: Version 1.4.1
 
 - zentrale Eintragsliste über Netlify Blobs
 - geschützte Verwaltung über `ADMIN_PASSWORD`
@@ -90,3 +90,6 @@ Die dort hinterlegten Links können später geändert oder erweitert werden, ohn
 ## Weiterentwicklung
 
 Die nächsten geplanten Ausbauschritte stehen in [ROADMAP.md](ROADMAP.md). Detaillierte Konzepte für Excel-Import, Änderungsverlauf und Sicherungen befinden sich unter [`docs/`](docs/).
+
+- Dropbox-Dokumente werden möglichst direkt im Browser geöffnet (`raw=1`)
+- sichtbare Versionsanzeige in der Oberfläche
