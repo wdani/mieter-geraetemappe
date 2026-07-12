@@ -1,14 +1,18 @@
 # Roadmap
 
-## Version 1.3.0 – umgesetzt
+## Bis Version 1.4.0 umgesetzt
 
 - verwaltbare Kategorie-Labels
 - verwaltbare Wohnungs- und Bereichs-Labels
+- intelligentes Entfernen nicht mehr verwendeter Labels
+- Labels umbenennen und kontrolliert löschen
 - Mehrfachzuordnung eines Eintrags zu Wohnungen oder Bereichen
+- mehrere beschriftete Links pro Eintrag
 - automatische Migration älterer Einträge
 - Einträge duplizieren
-- Excel-Export mit Mehrfachzuordnungen
-- JSON-Sicherungen inklusive Label-Listen
+- Excel-Export mit Mehrfachzuordnungen und mehreren Links
+- vollständiger Backup-Download und Backup-Import
+- automatische Sicherheitskopie vor einem Backup-Import
 
 ## Nächste Ausbaustufe
 
@@ -19,10 +23,6 @@
 - Gerät
 - Kontakt
 - Hinweis
-
-### Mehrere Links pro Eintrag
-
-Ein Eintrag kann mehrere beschriftete Links enthalten. Reine Informationseinträge bleiben ohne Link möglich.
 
 ### Wohnungsseiten
 
@@ -56,9 +56,10 @@ Geplant sind eigene Übersichtsseiten wie `/wohnung/2a`, die nur die zugeordnete
 
 ### Automatische Sicherungen
 
-- regelmässige automatische Sicherung
-- Sicherung vor Importen und grösseren Löschaktionen
+- zeitgesteuerte Sicherungen
+- zusätzliche Sicherung vor grösseren Löschaktionen
 - Aufbewahrungsregeln
+- Liste verfügbarer Sicherungsstände
 - Wiederherstellung mit Vorschau
 
 ## Vorläufig nicht geplant
