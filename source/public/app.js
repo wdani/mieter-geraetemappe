@@ -109,8 +109,8 @@ function directLink(value) {
   try {
     const url = new URL(value);
     if (url.hostname.includes("dropbox.com")) {
-      url.searchParams.set("dl", "1");
-      url.searchParams.delete("raw");
+      url.searchParams.delete("dl");
+      url.searchParams.set("raw", "1");
     }
     return url.toString();
   } catch {
