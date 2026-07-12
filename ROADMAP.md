@@ -1,6 +1,16 @@
 # Roadmap
 
-## Version 1.3
+## Version 1.3.0 – umgesetzt
+
+- verwaltbare Kategorie-Labels
+- verwaltbare Wohnungs- und Bereichs-Labels
+- Mehrfachzuordnung eines Eintrags zu Wohnungen oder Bereichen
+- automatische Migration älterer Einträge
+- Einträge duplizieren
+- Excel-Export mit Mehrfachzuordnungen
+- JSON-Sicherungen inklusive Label-Listen
+
+## Nächste Ausbaustufe
 
 ### Eintragstypen
 
@@ -14,9 +24,9 @@
 
 Ein Eintrag kann mehrere beschriftete Links enthalten. Reine Informationseinträge bleiben ohne Link möglich.
 
-### Zuordnung und Wohnungsseiten
+### Wohnungsseiten
 
-Einträge können allen, einer oder mehreren Wohnungen sowie allgemeinen Liegenschaftsinformationen zugeordnet werden. Geplant sind Übersichtsseiten wie `/wohnung/2a`.
+Geplant sind eigene Übersichtsseiten wie `/wohnung/2a`, die nur die zugeordneten Einträge anzeigen. Ein allgemeiner QR-Code kann dadurch auf die gesamte Informationsmappe einer Wohnung führen.
 
 ### QR-System
 
@@ -44,14 +54,14 @@ Einträge können allen, einer oder mehreren Wohnungen sowie allgemeinen Liegens
 - Wiederherstellung früherer Versionen
 - Rückgängig für Importe und Löschungen
 
-### Automatische Backups
+### Automatische Sicherungen
 
-- tägliche automatische Sicherung
+- regelmässige automatische Sicherung
 - Sicherung vor Importen und grösseren Löschaktionen
 - Aufbewahrungsregeln
 - Wiederherstellung mit Vorschau
 
-## Nicht Teil von 1.3
+## Vorläufig nicht geplant
 
 - Mieter-Benutzerkonten
 - Ticket- oder Schadensmeldesystem
