@@ -1,0 +1,38 @@
+name: Bootstrap project files
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - bootstrap.mjs
+      - source/**
+      - templates/**
+      - .github/workflows/bootstrap-project.yml
+
+permissions:
+  contents: write
+
+jobs:
+  bootstrap:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Generate deployable project tree
+        run: node bootstrap.mjs
+
+      - name: Commit generated project files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json netlify.toml tsconfig.json public netlify
+          git commit -m "Generate deployable project files [skip ci]" || exit 0
+          git push

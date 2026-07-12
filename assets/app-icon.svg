@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Gerätemappe</title>
+  <rect width="512" height="512" rx="112" fill="#0e98a0"/>
+  <path d="M84 210h148l34 34h162v170H84z" fill="#fff"/>
+  <path d="M142 116h140v114H142z" fill="#fff"/>
+  <path d="M278 92h144v148H278z" fill="#fff"/>
+  <path d="M170 148h84v14h-84zm0 34h84v14h-84z" fill="#075a64"/>
+  <path d="M369 117c-27 0-49 22-49 49 0 7 1 13 4 19l-54 54 30 30 54-54c6 3 12 4 19 4 27 0 49-22 49-49 0-10-3-19-8-27l-26 26-22-22 26-26c-7-3-15-4-23-4z" fill="#075a64"/>
+  <path d="M181 341l75-70 75 70-27 28-48-46-49 46z" fill="#075a64"/>
+  <path d="M218 342h76v72h-76z" fill="#075a64"/>
+  <path d="M236 357h17v17h-17zm25 0h17v17h-17zm-25 25h17v17h-17zm25 0h17v17h-17z" fill="#fff"/>
+</svg>

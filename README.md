@@ -27,6 +27,18 @@ Ein Eintrag kann beispielsweise enthalten:
 - optionalen Dokument-Link
 - stabile ID für QR-Codes
 
+## Projektstruktur
+
+Der bearbeitbare Ausgangsstand liegt unter `source/`. `bootstrap.mjs` erzeugt daraus die für Entwicklung und Deployment benötigten Stammdateien und Ordner:
+
+- `package.json`
+- `netlify.toml`
+- `tsconfig.json`
+- `public/`
+- `netlify/`
+
+Nach dem ersten Merge auf `main` erledigt ein GitHub-Workflow diesen Schritt automatisch und legt den direkt deploybaren Projektstand ab.
+
 ## Lokale Entwicklung
 
 Voraussetzungen:
@@ -36,18 +48,14 @@ Voraussetzungen:
 - Netlify CLI
 
 ```bash
+node bootstrap.mjs
 npm install
 npm run build
+npm run check
 npm run dev
 ```
 
 Die Icons werden beim Build aus `assets/app-icon.svg` erzeugt. Die lokale Entwicklung verwendet eine getrennte Netlify-Blobs-Umgebung.
-
-## Prüfung
-
-```bash
-npm run check
-```
 
 ## Deployment
 
@@ -58,7 +66,7 @@ Das Projekt ist für Netlify vorbereitet:
 - Functions-Verzeichnis: `netlify/functions`
 - benötigte Environment-Variable: `ADMIN_PASSWORD`
 
-Für automatische Deploys kann das Repository direkt mit dem bestehenden Netlify-Projekt verbunden werden.
+Für automatische Deploys kann das Repository direkt mit dem bestehenden Netlify-Projekt verbunden werden. Produktive Einträge bleiben im Laufzeitspeicher und werden nicht Teil des Git-Repositorys.
 
 ## QR-Prinzip
 

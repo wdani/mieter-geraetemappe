@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f766e">
+  <meta name="application-name" content="Gerätemappe">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Gerätemappe">
+  <title>Gerätemappe · Dokumente und Informationen</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Gerätemappe Startseite">
+      <span class="brand-mark">⌂</span>
+      <span><strong>Gerätemappe</strong><small>Dokumente und Informationen für Mieter</small></span>
+    </a>
+    <button id="adminButton" class="button button-secondary" type="button">Verwaltung</button>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <p class="eyebrow">Digitale Informationsmappe</p>
+      <h1>Dokumente und wichtige Informationen schnell finden.</h1>
+      <p>Geräteanleitungen, Farb- und Materialangaben, Pflegehinweise sowie allgemeine Informationen an einem Ort.</p>
+    </section>
+
+    <section id="overviewView">
+      <div class="toolbar panel">
+        <input id="searchInput" type="search" placeholder="Titel, Kategorie, Wohnung oder Notiz suchen …">
+        <select id="apartmentFilter" aria-label="Wohnung oder Bereich"><option value="">Alle Bereiche</option></select>
+        <select id="categoryFilter" aria-label="Kategorie"><option value="">Alle Kategorien</option></select>
+        <button id="addButton" class="button button-primary admin-only" type="button">Eintrag hinzufügen</button>
+      </div>
+
+      <div class="admin-tools panel admin-only">
+        <strong>Verwaltung</strong>
+        <button id="excelButton" class="button button-secondary" type="button">Excel exportieren</button>
+        <button id="jsonExportButton" class="button button-secondary" type="button">JSON sichern</button>
+        <button id="jsonImportButton" class="button button-secondary" type="button">JSON importieren</button>
+        <input id="jsonImportInput" type="file" accept="application/json,.json" hidden>
+      </div>
+
+      <div class="section-heading">
+        <div><h2>Einträge</h2><p id="resultCount">0 Einträge</p></div>
+        <p id="statusText" role="status"></p>
+      </div>
+      <section id="entryGrid" class="entry-grid" aria-live="polite"></section>
+    </section>
+
+    <section id="detailView" class="detail-view" hidden>
+      <button id="backButton" class="button button-secondary" type="button">← Zur Übersicht</button>
+      <article id="detailCard" class="detail-card"></article>
+    </section>
+  </main>
+
+  <dialog id="entryDialog">
+    <form id="entryForm" method="dialog">
+      <header><div><p class="eyebrow">Verwaltung</p><h2 id="entryDialogTitle">Eintrag hinzufügen</h2></div><button class="icon-button" value="cancel" aria-label="Schliessen">×</button></header>
+      <label>Titel<input id="titleInput" required maxlength="200"></label>
+      <label>Kategorie<input id="categoryInput" required maxlength="100" list="categoryList"><datalist id="categoryList"></datalist></label>
+      <label>Wohnung oder Bereich<input id="apartmentInput" required maxlength="100" list="apartmentList"><datalist id="apartmentList"></datalist></label>
+      <label>Dokument-Link <span>(optional)</span><input id="linkInput" type="url" maxlength="2000" placeholder="https://…"></label>
+      <label>Notiz oder Information <span>(optional bei vorhandenem Link)</span><textarea id="noteInput" maxlength="1000" rows="4" placeholder="z. B. Wandfarbe: RAL 9010"></textarea></label>
+      <p class="hint">Mindestens eine Notiz oder ein Dokument-Link muss vorhanden sein.</p>
+      <footer>
+        <button id="deleteButton" class="button button-danger" type="button">Eintrag löschen</button>
+        <span class="spacer"></span>
+        <button class="button button-secondary" value="cancel">Abbrechen</button>
+        <button class="button button-primary" type="submit">Speichern</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <dialog id="loginDialog">
+    <form id="loginForm" method="dialog">
+      <header><div><p class="eyebrow">Geschützter Bereich</p><h2>Verwaltung öffnen</h2></div><button class="icon-button" value="cancel" aria-label="Schliessen">×</button></header>
+      <label>Verwaltungspasswort<input id="passwordInput" type="password" autocomplete="current-password" required></label>
+      <p id="loginError" class="error-text"></p>
+      <footer><span class="spacer"></span><button class="button button-secondary" value="cancel">Abbrechen</button><button class="button button-primary" type="submit">Öffnen</button></footer>
+    </form>
+  </dialog>
+
+  <dialog id="qrDialog">
+    <header><div><p class="eyebrow">Dauerhafter Eintragslink</p><h2 id="qrTitle">QR-Code</h2></div><button id="qrCloseButton" class="icon-button" type="button" aria-label="Schliessen">×</button></header>
+    <img id="qrImage" class="qr-image" alt="QR-Code">
+    <code id="qrUrl"></code>
+    <footer><button id="copyQrButton" class="button button-secondary" type="button">Link kopieren</button><a id="downloadQrButton" class="button button-primary" href="#" download>QR-Code herunterladen</a></footer>
+  </dialog>
+
+  <script src="/app.js"></script>
+</body>
+</html>
