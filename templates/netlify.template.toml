@@ -6,6 +6,11 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
+[[headers]]
+  for = "/.well-known/assetlinks.json"
+  [headers.values]
+    Content-Type = "application/json"
+
 [[redirects]]
   from = "/d/*"
   to = "/index.html"
