@@ -60,6 +60,7 @@ a { color: inherit; }
 .button-secondary { border: 1px solid var(--line); background: white; color: var(--text); }
 .button-danger { background: #fff0ef; color: var(--danger); }
 .icon-button { width: 42px; height: 42px; border: 0; border-radius: 50%; background: var(--surface-soft); color: var(--text); cursor: pointer; font-size: 1.5rem; }
+.text-button { border: 0; background: transparent; color: var(--primary-dark); font-weight: 750; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 
 .admin-tools { display: none; align-items: center; flex-wrap: wrap; gap: 10px; background: #e8f4f1; }
 .admin-mode .admin-tools { display: flex; }
@@ -90,19 +91,30 @@ a { color: inherit; }
 .detail-card p { max-width: 760px; color: var(--muted); font-size: 1.05rem; line-height: 1.7; }
 .detail-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
 
- dialog { width: min(620px, calc(100% - 24px)); max-height: calc(100dvh - 30px); padding: 0; border: 0; border-radius: 24px; color: var(--text); background: white; box-shadow: 0 28px 90px rgba(0,0,0,.24); }
+ dialog { width: min(680px, calc(100% - 24px)); max-height: calc(100dvh - 30px); padding: 0; border: 0; border-radius: 24px; color: var(--text); background: white; box-shadow: 0 28px 90px rgba(0,0,0,.24); }
 dialog::backdrop { background: rgba(4, 24, 21, .58); backdrop-filter: blur(6px); }
 dialog form, dialog > header, dialog > footer { padding: 22px; }
 dialog form > header, dialog > header { display: flex; align-items: start; justify-content: space-between; gap: 18px; padding: 0 0 18px; }
 dialog form { display: grid; gap: 15px; overflow: auto; }
 dialog label { display: grid; gap: 7px; font-weight: 800; }
-dialog label span, .hint { color: var(--muted); font-weight: 500; font-size: .85rem; }
+dialog label span, .hint, .picker-fieldset legend span { color: var(--muted); font-weight: 500; font-size: .85rem; }
 dialog footer, dialog form > footer { display: flex; align-items: center; gap: 10px; padding: 8px 0 0; }
 .spacer { flex: 1; }
 .error-text { min-height: 1.4em; margin: 0; color: var(--danger); }
 .qr-image { display: block; width: min(340px, 100%); margin: 0 auto; border-radius: 18px; }
 #qrDialog { padding: 22px; }
 #qrDialog code { display: block; margin: 14px 0; padding: 12px; border-radius: 12px; overflow-wrap: anywhere; background: var(--surface-soft); }
+
+.picker-fieldset { margin: 0; padding: 14px; border: 1px solid var(--line); border-radius: 16px; }
+.picker-fieldset legend { padding: 0 6px; font-weight: 800; }
+.chip-picker { display: flex; flex-wrap: wrap; gap: 8px; min-height: 38px; }
+.picker-chip { min-height: 36px; padding: 7px 12px; border: 1px solid var(--line); border-radius: 999px; background: white; color: var(--text); cursor: pointer; font-weight: 700; }
+.picker-chip:hover { border-color: #91c8c2; background: #f3fbfa; }
+.picker-chip.active { border-color: var(--primary); background: var(--primary); color: white; }
+.picker-empty { color: var(--muted); font-size: .9rem; }
+.add-label-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-top: 10px; }
+.add-label-row .button { min-height: 48px; }
+.secondary-entry-actions { display: flex; justify-content: center; min-height: 24px; }
 
 @media (max-width: 900px) {
   .toolbar { grid-template-columns: 1fr 1fr; }
@@ -122,4 +134,5 @@ dialog footer, dialog form > footer { display: flex; align-items: center; gap: 1
   .section-heading { align-items: start; flex-direction: column; }
   #statusText { text-align: left; }
   dialog form, #qrDialog { padding: 18px; }
+  .add-label-row { grid-template-columns: 1fr; }
 }

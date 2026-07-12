@@ -60,13 +60,41 @@
 
   <dialog id="entryDialog">
     <form id="entryForm" method="dialog">
-      <header><div><p class="eyebrow">Verwaltung</p><h2 id="entryDialogTitle">Eintrag hinzufügen</h2></div><button class="icon-button" value="cancel" aria-label="Schliessen">×</button></header>
+      <header>
+        <div><p class="eyebrow">Verwaltung</p><h2 id="entryDialogTitle">Eintrag hinzufügen</h2></div>
+        <button class="icon-button" value="cancel" aria-label="Schliessen">×</button>
+      </header>
+
       <label>Titel<input id="titleInput" required maxlength="200"></label>
-      <label>Kategorie<input id="categoryInput" required maxlength="100" list="categoryList"><datalist id="categoryList"></datalist></label>
-      <label>Wohnung oder Bereich<input id="apartmentInput" required maxlength="100" list="apartmentList"><datalist id="apartmentList"></datalist></label>
+
+      <fieldset class="picker-fieldset">
+        <legend>Kategorie</legend>
+        <div id="categoryPicker" class="chip-picker"></div>
+        <div class="add-label-row">
+          <input id="newCategoryInput" maxlength="100" placeholder="Neues Kategorie-Label, z. B. Küche">
+          <button id="addCategoryButton" class="button button-secondary" type="button">+ Label anlegen</button>
+        </div>
+        <p class="hint">Genau eine Kategorie auswählen.</p>
+      </fieldset>
+
+      <fieldset class="picker-fieldset">
+        <legend>Wohnung oder Bereich <span>(Mehrfachauswahl möglich)</span></legend>
+        <div id="apartmentPicker" class="chip-picker"></div>
+        <div class="add-label-row">
+          <input id="newApartmentInput" maxlength="100" placeholder="Neues Label, z. B. Wohnung 3">
+          <button id="addApartmentButton" class="button button-secondary" type="button">+ Label anlegen</button>
+        </div>
+        <p class="hint">Mindestens eine Wohnung oder einen Bereich auswählen.</p>
+      </fieldset>
+
       <label>Dokument-Link <span>(optional)</span><input id="linkInput" type="url" maxlength="2000" placeholder="https://…"></label>
       <label>Notiz oder Information <span>(optional bei vorhandenem Link)</span><textarea id="noteInput" maxlength="1000" rows="4" placeholder="z. B. Wandfarbe: RAL 9010"></textarea></label>
       <p class="hint">Mindestens eine Notiz oder ein Dokument-Link muss vorhanden sein.</p>
+
+      <div class="secondary-entry-actions">
+        <button id="duplicateButton" class="text-button" type="button">Eintrag duplizieren</button>
+      </div>
+
       <footer>
         <button id="deleteButton" class="button button-danger" type="button">Eintrag löschen</button>
         <span class="spacer"></span>

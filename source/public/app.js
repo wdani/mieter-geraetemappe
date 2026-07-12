@@ -1,12 +1,16 @@
 const API_URL = "/api/documents";
+const LABELS_URL = "/api/labels";
 const EXCEL_URL = "/api/export.xlsx";
 const QR_URL = "/api/qr";
 
 let documents = [];
+let labels = { categories: [], apartments: [] };
 let editingId = null;
 let adminPassword = sessionStorage.getItem("geraetemappeAdminPassword") || "";
 let isAdmin = false;
 let activeQrId = null;
+let selectedCategory = "";
+let selectedApartments = new Set();
 
 const $ = (selector) => document.querySelector(selector);
 const entryGrid = $("#entryGrid");
@@ -23,7 +27,28 @@ function escapeHtml(value) {
 }
 
 function unique(values) {
-  return [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, "de"));
+  const seen = new Map();
+  for (const value of values.filter(Boolean)) {
+    const text = String(value).trim();
+    if (!text) continue;
+    const key = text.toLocaleLowerCase("de");
+    if (!seen.has(key)) seen.set(key, text);
+  }
+  return [...seen.values()].sort((a, b) => a.localeCompare(b, "de"));
+}
+
+function getApartments(entry) {
+  if (Array.isArray(entry?.apartments)) return unique(entry.apartments);
+  if (typeof entry?.apartment === "string" && entry.apartment.trim()) return [entry.apartment.trim()];
+  return [];
+}
+
+function allCategoryLabels() {
+  return unique([...(labels.categories || []), ...documents.map((entry) => entry.category)]);
+}
+
+function allApartmentLabels() {
+  return unique([...(labels.apartments || []), ...documents.flatMap(getApartments)]);
 }
 
 function createId() {
@@ -37,7 +62,11 @@ function entryUrl(id) {
 function requestedId() {
   const match = window.location.pathname.match(/^\/d\/([^/]+)\/?$/);
   if (!match) return null;
-  try { return decodeURIComponent(match[1]); } catch { return match[1]; }
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return match[1];
+  }
 }
 
 function directLink(value) {
@@ -73,10 +102,27 @@ function setAdminMode(enabled) {
   render();
 }
 
+async function loadLabels() {
+  try {
+    const response = await fetch(LABELS_URL, { cache: "no-store" });
+    if (!response.ok) return;
+    const payload = await response.json();
+    labels = {
+      categories: Array.isArray(payload.categories) ? payload.categories : [],
+      apartments: Array.isArray(payload.apartments) ? payload.apartments : []
+    };
+  } catch (error) {
+    console.error("Labels konnten nicht geladen werden:", error);
+  }
+}
+
 async function loadDocuments() {
   setStatus("Einträge werden geladen …");
   try {
-    const response = await fetch(API_URL, { cache: "no-store" });
+    const [response] = await Promise.all([
+      fetch(API_URL, { cache: "no-store" }),
+      loadLabels()
+    ]);
     if (!response.ok) throw new Error(`Laden fehlgeschlagen (${response.status})`);
     const payload = await response.json();
     documents = Array.isArray(payload.documents) ? payload.documents : [];
@@ -100,7 +146,9 @@ async function saveDocuments(nextDocuments) {
   });
 
   let payload = {};
-  try { payload = await response.json(); } catch {}
+  try {
+    payload = await response.json();
+  } catch {}
 
   if (response.status === 401) {
     sessionStorage.removeItem("geraetemappeAdminPassword");
@@ -113,35 +161,57 @@ async function saveDocuments(nextDocuments) {
   documents = Array.isArray(payload.documents) ? payload.documents : nextDocuments;
 }
 
+async function saveLabels(nextLabels) {
+  const response = await fetch(LABELS_URL, {
+    method: "PUT",
+    headers: {
+      "content-type": "application/json",
+      "x-admin-password": adminPassword
+    },
+    body: JSON.stringify(nextLabels)
+  });
+
+  let payload = {};
+  try {
+    payload = await response.json();
+  } catch {}
+
+  if (response.status === 401) throw new Error("Das Verwaltungspasswort ist nicht korrekt.");
+  if (!response.ok) throw new Error(payload.error || `Labels konnten nicht gespeichert werden (${response.status})`);
+
+  labels = {
+    categories: Array.isArray(payload.categories) ? payload.categories : nextLabels.categories,
+    apartments: Array.isArray(payload.apartments) ? payload.apartments : nextLabels.apartments
+  };
+}
+
 function renderFilters() {
   const apartmentFilter = $("#apartmentFilter");
   const categoryFilter = $("#categoryFilter");
   const apartmentValue = apartmentFilter.value;
   const categoryValue = categoryFilter.value;
 
-  apartmentFilter.innerHTML = '<option value="">Alle Bereiche</option>' + unique(documents.map((entry) => entry.apartment))
-    .map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join("");
+  apartmentFilter.innerHTML = '<option value="">Alle Bereiche</option>' + unique(documents.flatMap(getApartments))
+    .map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`)
+    .join("");
   categoryFilter.innerHTML = '<option value="">Alle Kategorien</option>' + unique(documents.map((entry) => entry.category))
-    .map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join("");
+    .map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`)
+    .join("");
 
   apartmentFilter.value = [...apartmentFilter.options].some((option) => option.value === apartmentValue) ? apartmentValue : "";
   categoryFilter.value = [...categoryFilter.options].some((option) => option.value === categoryValue) ? categoryValue : "";
-
-  $("#categoryList").innerHTML = unique(documents.map((entry) => entry.category))
-    .map((value) => `<option value="${escapeHtml(value)}"></option>`).join("");
-  $("#apartmentList").innerHTML = unique(documents.map((entry) => entry.apartment))
-    .map((value) => `<option value="${escapeHtml(value)}"></option>`).join("");
 }
 
 function filteredDocuments() {
-  const query = $("#searchInput").value.trim().toLowerCase();
+  const query = $("#searchInput").value.trim().toLocaleLowerCase("de");
   const apartment = $("#apartmentFilter").value;
   const category = $("#categoryFilter").value;
 
   return documents.filter((entry) => {
-    const text = [entry.title, entry.category, entry.apartment, entry.note].join(" ").toLowerCase();
+    const apartments = getApartments(entry);
+    const text = [entry.title, entry.category, ...apartments, entry.note].join(" ").toLocaleLowerCase("de");
     return (!query || text.includes(query)) &&
-      (!apartment || entry.apartment === apartment) &&
+      (!apartment || apartments.includes(apartment)) &&
       (!category || entry.category === category);
   });
 }
@@ -155,20 +225,26 @@ function renderGrid() {
     return;
   }
 
-  entryGrid.innerHTML = list.map((entry) => `
-    <article class="entry-card">
-      <header>
-        <div class="tags"><span class="tag">${escapeHtml(entry.category)}</span><span class="tag">${escapeHtml(entry.apartment)}</span></div>
-        <button class="edit-button admin-only" type="button" data-edit="${escapeHtml(entry.id)}">Bearbeiten</button>
-      </header>
-      <h3>${escapeHtml(entry.title)}</h3>
-      <p>${escapeHtml(noteFor(entry))}</p>
-      <footer>
-        ${entry.link ? `<a class="button button-primary" href="${escapeHtml(directLink(entry.link))}" target="_blank" rel="noopener noreferrer">Dokument öffnen</a>` : `<button class="button button-primary" type="button" data-detail="${escapeHtml(entry.id)}">Information öffnen</button>`}
-        <button class="qr-button admin-only" type="button" data-qr="${escapeHtml(entry.id)}">QR</button>
-      </footer>
-    </article>
-  `).join("");
+  entryGrid.innerHTML = list.map((entry) => {
+    const apartmentTags = getApartments(entry)
+      .map((value) => `<span class="tag">${escapeHtml(value)}</span>`)
+      .join("");
+
+    return `
+      <article class="entry-card">
+        <header>
+          <div class="tags"><span class="tag">${escapeHtml(entry.category)}</span>${apartmentTags}</div>
+          <button class="edit-button admin-only" type="button" data-edit="${escapeHtml(entry.id)}">Bearbeiten</button>
+        </header>
+        <h3>${escapeHtml(entry.title)}</h3>
+        <p>${escapeHtml(noteFor(entry))}</p>
+        <footer>
+          ${entry.link ? `<a class="button button-primary" href="${escapeHtml(directLink(entry.link))}" target="_blank" rel="noopener noreferrer">Dokument öffnen</a>` : `<button class="button button-primary" type="button" data-detail="${escapeHtml(entry.id)}">Information öffnen</button>`}
+          <button class="qr-button admin-only" type="button" data-qr="${escapeHtml(entry.id)}">QR</button>
+        </footer>
+      </article>
+    `;
+  }).join("");
 
   entryGrid.querySelectorAll("[data-edit]").forEach((button) => button.addEventListener("click", () => openEntryDialog(button.dataset.edit)));
   entryGrid.querySelectorAll("[data-qr]").forEach((button) => button.addEventListener("click", () => openQrDialog(button.dataset.qr)));
@@ -192,9 +268,13 @@ function renderDetail() {
     return;
   }
 
+  const apartmentTags = getApartments(entry)
+    .map((value) => `<span class="tag">${escapeHtml(value)}</span>`)
+    .join("");
+
   document.title = `${entry.title} · Gerätemappe`;
   $("#detailCard").innerHTML = `
-    <div class="tags"><span class="tag">${escapeHtml(entry.category)}</span><span class="tag">${escapeHtml(entry.apartment)}</span></div>
+    <div class="tags"><span class="tag">${escapeHtml(entry.category)}</span>${apartmentTags}</div>
     <h1>${escapeHtml(entry.title)}</h1>
     <p>${escapeHtml(noteFor(entry))}</p>
     <div class="detail-actions">
@@ -217,25 +297,171 @@ function navigateToEntry(id) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+function renderCategoryPicker() {
+  const container = $("#categoryPicker");
+  const values = allCategoryLabels();
+
+  if (!values.length) {
+    container.innerHTML = '<span class="picker-empty">Noch keine Kategorien vorhanden. Unten ein Label anlegen.</span>';
+    return;
+  }
+
+  container.innerHTML = values.map((value) => `
+    <button class="picker-chip ${value === selectedCategory ? "active" : ""}" type="button" data-category="${encodeURIComponent(value)}">${escapeHtml(value)}</button>
+  `).join("");
+
+  container.querySelectorAll("[data-category]").forEach((button) => {
+    button.addEventListener("click", () => {
+      selectedCategory = decodeURIComponent(button.dataset.category);
+      renderCategoryPicker();
+    });
+  });
+}
+
+function renderApartmentPicker() {
+  const container = $("#apartmentPicker");
+  const values = allApartmentLabels();
+
+  if (!values.length) {
+    container.innerHTML = '<span class="picker-empty">Noch keine Wohnungen oder Bereiche vorhanden. Unten ein Label anlegen.</span>';
+    return;
+  }
+
+  container.innerHTML = values.map((value) => `
+    <button class="picker-chip ${selectedApartments.has(value) ? "active" : ""}" type="button" data-apartment="${encodeURIComponent(value)}">${escapeHtml(value)}</button>
+  `).join("");
+
+  container.querySelectorAll("[data-apartment]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const value = decodeURIComponent(button.dataset.apartment);
+      if (selectedApartments.has(value)) selectedApartments.delete(value);
+      else selectedApartments.add(value);
+      renderApartmentPicker();
+    });
+  });
+}
+
+async function addCategoryLabel() {
+  const input = $("#newCategoryInput");
+  const value = input.value.trim();
+  if (!value) return;
+
+  const existing = allCategoryLabels().find((item) => item.toLocaleLowerCase("de") === value.toLocaleLowerCase("de"));
+  if (existing) {
+    selectedCategory = existing;
+    input.value = "";
+    renderCategoryPicker();
+    return;
+  }
+
+  const nextLabels = {
+    categories: unique([...(labels.categories || []), value]),
+    apartments: labels.apartments || []
+  };
+
+  try {
+    await saveLabels(nextLabels);
+    selectedCategory = value;
+    input.value = "";
+    renderCategoryPicker();
+    setStatus("Kategorie-Label gespeichert.");
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+async function addApartmentLabel() {
+  const input = $("#newApartmentInput");
+  const value = input.value.trim();
+  if (!value) return;
+
+  const existing = allApartmentLabels().find((item) => item.toLocaleLowerCase("de") === value.toLocaleLowerCase("de"));
+  if (existing) {
+    selectedApartments.add(existing);
+    input.value = "";
+    renderApartmentPicker();
+    return;
+  }
+
+  const nextLabels = {
+    categories: labels.categories || [],
+    apartments: unique([...(labels.apartments || []), value])
+  };
+
+  try {
+    await saveLabels(nextLabels);
+    selectedApartments.add(value);
+    input.value = "";
+    renderApartmentPicker();
+    setStatus("Wohnungs-/Bereichs-Label gespeichert.");
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
 function openEntryDialog(id = null) {
   if (!isAdmin) return;
   editingId = id;
   const entry = id ? documents.find((item) => item.id === id) : null;
+
   $("#entryDialogTitle").textContent = entry ? "Eintrag bearbeiten" : "Eintrag hinzufügen";
   $("#titleInput").value = entry?.title || "";
-  $("#categoryInput").value = entry?.category || "";
-  $("#apartmentInput").value = entry?.apartment || "";
   $("#linkInput").value = entry?.link || "";
   $("#noteInput").value = entry?.note || "";
+  selectedCategory = entry?.category || "";
+  selectedApartments = new Set(entry ? getApartments(entry) : []);
   $("#deleteButton").hidden = !entry;
+  $("#duplicateButton").hidden = !entry;
+  $("#newCategoryInput").value = "";
+  $("#newApartmentInput").value = "";
+  renderCategoryPicker();
+  renderApartmentPicker();
   entryDialog.showModal();
+}
+
+function duplicateEntry() {
+  if (!editingId || !isAdmin) return;
+  const original = documents.find((entry) => entry.id === editingId);
+  if (!original) return;
+
+  editingId = null;
+  $("#entryDialogTitle").textContent = "Eintrag hinzufügen (Kopie)";
+  $("#titleInput").value = `${original.title} (Kopie)`;
+  $("#linkInput").value = original.link || "";
+  $("#noteInput").value = original.note || "";
+  selectedCategory = original.category;
+  selectedApartments = new Set(getApartments(original));
+  $("#deleteButton").hidden = true;
+  $("#duplicateButton").hidden = true;
+  renderCategoryPicker();
+  renderApartmentPicker();
+  $("#titleInput").focus();
 }
 
 async function submitEntry(event) {
   event.preventDefault();
+  if (event.submitter?.value === "cancel") {
+    entryDialog.close();
+    editingId = null;
+    return;
+  }
+
   const link = $("#linkInput").value.trim();
   const note = $("#noteInput").value.trim();
+  const title = $("#titleInput").value.trim();
 
+  if (!title) {
+    alert("Bitte einen Titel eintragen.");
+    return;
+  }
+  if (!selectedCategory) {
+    alert("Bitte eine Kategorie auswählen oder anlegen.");
+    return;
+  }
+  if (!selectedApartments.size) {
+    alert("Bitte mindestens eine Wohnung oder einen Bereich auswählen.");
+    return;
+  }
   if (!link && !note) {
     alert("Bitte eine Notiz oder einen Dokument-Link eintragen.");
     return;
@@ -252,13 +478,15 @@ async function submitEntry(event) {
 
   const entry = {
     id: editingId || createId(),
-    title: $("#titleInput").value.trim(),
-    category: $("#categoryInput").value.trim(),
-    apartment: $("#apartmentInput").value.trim(),
+    title,
+    category: selectedCategory,
+    apartments: [...selectedApartments],
     link,
     note
   };
-  const next = editingId ? documents.map((item) => item.id === editingId ? entry : item) : [...documents, entry];
+  const next = editingId
+    ? documents.map((item) => item.id === editingId ? entry : item)
+    : [...documents, entry];
 
   try {
     await saveDocuments(next);
@@ -286,6 +514,11 @@ async function deleteEntry() {
 
 async function login(event) {
   event.preventDefault();
+  if (event.submitter?.value === "cancel") {
+    loginDialog.close();
+    return;
+  }
+
   adminPassword = $("#passwordInput").value;
   $("#loginError").textContent = "";
   try {
@@ -325,8 +558,12 @@ function openQrDialog(id) {
 async function copyQrLink() {
   if (!activeQrId) return;
   const value = entryUrl(activeQrId);
-  try { await navigator.clipboard.writeText(value); setStatus("QR-Link kopiert."); }
-  catch { prompt("Link kopieren:", value); }
+  try {
+    await navigator.clipboard.writeText(value);
+    setStatus("QR-Link kopiert.");
+  } catch {
+    prompt("Link kopieren:", value);
+  }
 }
 
 function downloadBlob(blob, filename) {
@@ -339,14 +576,28 @@ function downloadBlob(blob, filename) {
 }
 
 async function exportExcel() {
-  const response = await fetch(EXCEL_URL, { method: "POST", headers: { "x-admin-password": adminPassword } });
+  const response = await fetch(EXCEL_URL, {
+    method: "POST",
+    headers: { "x-admin-password": adminPassword }
+  });
   if (!response.ok) throw new Error("Excel-Export fehlgeschlagen.");
-  downloadBlob(await response.blob(), `Geraetemappe-Export-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  downloadBlob(
+    await response.blob(),
+    `Geraetemappe-Export-${new Date().toISOString().slice(0, 10)}.xlsx`
+  );
 }
 
 function exportJson() {
-  const payload = { version: 1, exportedAt: new Date().toISOString(), documents };
-  downloadBlob(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }), `Geraetemappe-Sicherung-${new Date().toISOString().slice(0, 10)}.json`);
+  const payload = {
+    version: 2,
+    exportedAt: new Date().toISOString(),
+    labels,
+    documents
+  };
+  downloadBlob(
+    new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }),
+    `Geraetemappe-Sicherung-${new Date().toISOString().slice(0, 10)}.json`
+  );
 }
 
 async function importJson(file) {
@@ -356,8 +607,17 @@ async function importJson(file) {
     const imported = Array.isArray(payload) ? payload : payload.documents;
     if (!Array.isArray(imported)) throw new Error("Ungültige Sicherungsdatei.");
     if (!confirm(`${imported.length} Einträge importieren und die aktuelle Liste ersetzen?`)) return;
+
+    if (payload.labels && typeof payload.labels === "object") {
+      await saveLabels({
+        categories: Array.isArray(payload.labels.categories) ? payload.labels.categories : [],
+        apartments: Array.isArray(payload.labels.apartments) ? payload.labels.apartments : []
+      });
+    }
+
     await saveDocuments(imported);
     render();
+    setStatus("JSON-Sicherung importiert.");
   } catch (error) {
     alert(error.message);
   } finally {
@@ -372,8 +632,27 @@ $("#adminButton").addEventListener("click", toggleAdmin);
 $("#addButton").addEventListener("click", () => openEntryDialog());
 $("#entryForm").addEventListener("submit", submitEntry);
 $("#deleteButton").addEventListener("click", deleteEntry);
+$("#duplicateButton").addEventListener("click", duplicateEntry);
+$("#addCategoryButton").addEventListener("click", addCategoryLabel);
+$("#addApartmentButton").addEventListener("click", addApartmentLabel);
+$("#newCategoryInput").addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    addCategoryLabel();
+  }
+});
+$("#newApartmentInput").addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    addApartmentLabel();
+  }
+});
 $("#loginForm").addEventListener("submit", login);
-$("#backButton").addEventListener("click", () => { history.pushState({}, "", "/"); document.title = "Gerätemappe · Dokumente und Informationen"; renderDetail(); });
+$("#backButton").addEventListener("click", () => {
+  history.pushState({}, "", "/");
+  document.title = "Gerätemappe · Dokumente und Informationen";
+  renderDetail();
+});
 $("#qrCloseButton").addEventListener("click", () => qrDialog.close());
 $("#copyQrButton").addEventListener("click", copyQrLink);
 $("#excelButton").addEventListener("click", () => exportExcel().catch((error) => alert(error.message)));

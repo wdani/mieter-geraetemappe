@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.3.0
+
+- Kategorien und Wohnungen/Bereiche können als wiederverwendbare Labels angelegt werden.
+- Ein Eintrag kann mehreren Wohnungen oder Bereichen zugeordnet werden.
+- Ältere Einträge mit dem Feld `apartment` werden automatisch in das neue Datenmodell überführt.
+- Einträge können im Verwaltungsmodus dupliziert werden.
+- Filter, Karten, Detailseiten und Excel-Export unterstützen Mehrfachzuordnungen.
+- JSON-Sicherungen enthalten neben den Einträgen nun auch die Label-Listen.
+- Versionsangaben wurden auf 1.3.0 vereinheitlicht.
+- PWA-Cache wurde für das Update erneuert.
+
 ## 1.2.0
 
 - Dokument-Link ist optional.
