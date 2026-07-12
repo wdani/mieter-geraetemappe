@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "ch.wohlgemuth.geraetemappe",
+      "sha256_cert_fingerprints": [
+        "1F:24:93:45:E8:8F:11:28:E2:F2:FF:FB:F0:A7:72:9C:26:D3:30:A7:20:9B:EE:73:DB:14:80:A2:48:87:B8:AB"
+      ]
+    }
+  }
+]

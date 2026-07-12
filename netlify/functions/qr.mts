@@ -17,7 +17,7 @@ export default async (request: Request, _context: Context) => {
   if (!/^[A-Za-z0-9_-]{1,100}$/.test(id)) return json({ error: "Ungültige Eintrags-ID." }, 400);
 
   const documents = await readDocuments();
-  const document = documents.find(item => item.id === id);
+  const document = documents.find((item) => item.id === id);
   if (!document) return json({ error: "Eintrag nicht gefunden." }, 404);
 
   const detailUrl = `${requestUrl.origin}/d/${encodeURIComponent(document.id)}`;
@@ -34,8 +34,9 @@ export default async (request: Request, _context: Context) => {
     .replace(/-+/g, "-")
     .slice(0, 80) || "Eintrag";
   const download = requestUrl.searchParams.get("download") === "1";
+  const body = Uint8Array.from(png);
 
-  return new Response(png, {
+  return new Response(body, {
     status: 200,
     headers: {
       "content-type": "image/png",

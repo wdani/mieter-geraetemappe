@@ -15,7 +15,7 @@ export default async (request: Request, _context: Context) => {
 
   const origin = new URL(request.url).origin;
   const documents = (await readDocuments()).sort((a, b) =>
-    a.apartment.localeCompare(b.apartment, "de") ||
+    (a.apartments[0] || "").localeCompare(b.apartments[0] || "", "de") ||
     a.category.localeCompare(b.category, "de") ||
     a.title.localeCompare(b.title, "de")
   );
@@ -52,7 +52,7 @@ export default async (request: Request, _context: Context) => {
     { header: "ID", key: "id", width: 22 },
     { header: "Titel", key: "title", width: 34 },
     { header: "Kategorie", key: "category", width: 20 },
-    { header: "Wohnung / Bereich", key: "apartment", width: 24 },
+    { header: "Wohnung / Bereich", key: "apartment", width: 30 },
     { header: "Notiz", key: "note", width: 42 },
     { header: "Dokument-Link (optional)", key: "link", width: 52 },
     { header: "QR-Link zur Gerätemappe", key: "qrLink", width: 52 }
@@ -64,7 +64,7 @@ export default async (request: Request, _context: Context) => {
       id: document.id,
       title: document.title,
       category: document.category,
-      apartment: document.apartment,
+      apartment: document.apartments.join(", "),
       note: document.note || "",
       link: document.link ? { text: document.link, hyperlink: document.link } : "",
       qrLink: { text: qrLink, hyperlink: qrLink }
