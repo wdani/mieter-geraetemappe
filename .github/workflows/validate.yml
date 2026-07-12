@@ -1,0 +1,40 @@
+name: Validate project
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Generate deployable project tree
+        run: node bootstrap.mjs
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate application assets
+        run: npm run build
+
+      - name: Check browser JavaScript syntax
+        run: node --check public/app.js
+
+      - name: Check TypeScript functions
+        run: npm run check
