@@ -2,7 +2,7 @@
 
 Digitale Informationsmappe für Mietwohnungen und Liegenschaften. Sie verwaltet datenschutzfreundliche Inhalte wie Geräteanleitungen, Farb- und Materialangaben, Pflegehinweise, technische Informationen und allgemeine Kontakte.
 
-## Aktueller Stand: Version 1.4.1
+## Aktueller Stand: Version 1.5.0
 
 - zentrale Eintragsliste über Netlify Blobs
 - geschützte Verwaltung über `ADMIN_PASSWORD`
@@ -11,15 +11,17 @@ Digitale Informationsmappe für Mietwohnungen und Liegenschaften. Sie verwaltet 
 - QR-Code-Vorschau und PNG-Download pro Eintrag
 - Excel-Export als `.xlsx`
 - vollständiger Backup-Download und Backup-Import als JSON
-- automatische Sicherheitskopie vor jedem Backup-Import
 - reine Notiz- und Informationseinträge ohne externen Link
 - mehrere beschriftete Links pro Eintrag, etwa Anleitung, technische Beschreibung oder Video
 - verwaltbare Kategorie- und Wohnungs-/Bereichs-Labels
-- Labels können umbenannt oder kontrolliert gelöscht werden
-- nicht mehr verwendete Labels verschwinden automatisch aus der Auswahl
 - Zuordnung eines Eintrags zu mehreren Wohnungen oder Bereichen
-- automatische Migration älterer Einträge mit den Feldern `apartment` und `link`
 - Einträge können im Verwaltungsmodus dupliziert werden
+- eigene Übersichtsseite mit dauerhaftem QR-Code pro Wohnung oder Bereich
+- QR-Druckbogen als A4-PDF mit zehn beschrifteten Etiketten pro Seite
+- tägliche automatische Sicherung mit 30 aufbewahrten Tagesständen
+- zusätzliche monatliche Sicherung mit 12 aufbewahrten Monatsständen
+- Backup-Übersicht mit Download und Wiederherstellung
+- automatische Sicherheitskopien vor Importen, Wiederherstellungen und grösseren Löschaktionen
 
 ## Datenprinzip
 
@@ -35,6 +37,16 @@ Ein Eintrag kann beispielsweise enthalten:
 - stabile ID für QR-Codes
 
 Labels werden nicht dauerhaft als ungenutzte Auswahlliste geführt. Die Anwendung leitet die verfügbaren Kategorien und Wohnungen/Bereiche aus den tatsächlich gespeicherten Einträgen ab. Wird ein Label nirgends mehr verwendet, wird es beim nächsten Speichern automatisch entfernt.
+
+## Wohnungsseiten
+
+Jede verwendete Wohnung beziehungsweise jeder Bereich erhält eine stabile interne ID und eine eigene Adresse:
+
+```text
+/wohnung/<ID>
+```
+
+Die Seite enthält alle direkt zugeordneten Einträge sowie allgemeine Inhalte. Eine normale Umbenennung des Wohnungs-Labels behält die ID bei, damit bereits gedruckte QR-Codes gültig bleiben.
 
 ## Projektstruktur
 
@@ -79,17 +91,20 @@ Produktive Einträge bleiben im Laufzeitspeicher und werden nicht Teil des Git-R
 
 ## QR-Prinzip
 
-Neue QR-Codes verlinken nicht direkt auf einen externen Dokumentenspeicher, sondern auf eine stabile Detailseite der Gerätemappe:
+Einzelne Einträge verwenden stabile Detailseiten:
 
 ```text
 /d/<ID>
 ```
 
-Die dort hinterlegten Links können später geändert oder erweitert werden, ohne den gedruckten QR-Code ersetzen zu müssen. Reine Informationseinträge funktionieren ebenfalls ohne externen Link.
+Wohnungsübersichten verwenden:
+
+```text
+/wohnung/<ID>
+```
+
+Die hinterlegten Dokument-Links können später geändert oder erweitert werden, ohne den gedruckten QR-Code ersetzen zu müssen. Reine Informationseinträge funktionieren ebenfalls ohne externen Link.
 
 ## Weiterentwicklung
 
-Die nächsten geplanten Ausbauschritte stehen in [ROADMAP.md](ROADMAP.md). Detaillierte Konzepte für Excel-Import, Änderungsverlauf und Sicherungen befinden sich unter [`docs/`](docs/).
-
-- Dropbox-Dokumente werden möglichst direkt im Browser geöffnet (`raw=1`)
-- sichtbare Versionsanzeige in der Oberfläche
+Weitere mögliche Ausbauschritte stehen in [ROADMAP.md](ROADMAP.md). Detaillierte Konzepte für Excel-Import, Änderungsverlauf und Sicherungen befinden sich unter [`docs/`](docs/).
