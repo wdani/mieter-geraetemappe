@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.2
+
+- X und „Abbrechen“ schliessen den Eintragsdialog wieder ohne die Pflichtfeldprüfung auszulösen.
+- Derselbe Abbruchfehler im Verwaltungs-Login wurde ebenfalls behoben.
+- Der automatisch erzeugte Projekt-Commit darf den verbundenen Netlify-Deploy auslösen.
+- PWA-Cache für den Fix erneuert.
+
 ## 1.4.1
 
 - Dropbox-Freigabelinks verwenden `raw=1`, damit unterstützte Dokumente direkt im Browser geöffnet werden und die Dropbox-Zwischenseite möglichst umgangen wird.
