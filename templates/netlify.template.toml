@@ -15,3 +15,8 @@
   from = "/d/*"
   to = "/index.html"
   status = 200
+
+[[redirects]]
+  from = "/wohnung/*"
+  to = "/index.html"
+  status = 200
