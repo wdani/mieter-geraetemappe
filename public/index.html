@@ -63,7 +63,7 @@
     <form id="entryForm" method="dialog">
       <header>
         <div><p class="eyebrow">Verwaltung</p><h2 id="entryDialogTitle">Eintrag hinzufügen</h2></div>
-        <button class="icon-button" value="cancel" aria-label="Schliessen">×</button>
+        <button class="icon-button" value="cancel" formnovalidate aria-label="Schliessen">×</button>
       </header>
 
       <label>Titel<input id="titleInput" required maxlength="200"></label>
@@ -105,7 +105,7 @@
       <footer>
         <button id="deleteButton" class="button button-danger" type="button">Eintrag löschen</button>
         <span class="spacer"></span>
-        <button class="button button-secondary" value="cancel">Abbrechen</button>
+        <button class="button button-secondary" value="cancel" formnovalidate>Abbrechen</button>
         <button class="button button-primary" type="submit">Speichern</button>
       </footer>
     </form>
@@ -131,10 +131,10 @@
 
   <dialog id="loginDialog">
     <form id="loginForm" method="dialog">
-      <header><div><p class="eyebrow">Geschützter Bereich</p><h2>Verwaltung öffnen</h2></div><button class="icon-button" value="cancel" aria-label="Schliessen">×</button></header>
+      <header><div><p class="eyebrow">Geschützter Bereich</p><h2>Verwaltung öffnen</h2></div><button class="icon-button" value="cancel" formnovalidate aria-label="Schliessen">×</button></header>
       <label>Verwaltungspasswort<input id="passwordInput" type="password" autocomplete="current-password" required></label>
       <p id="loginError" class="error-text"></p>
-      <footer><span class="spacer"></span><button class="button button-secondary" value="cancel">Abbrechen</button><button class="button button-primary" type="submit">Öffnen</button></footer>
+      <footer><span class="spacer"></span><button class="button button-secondary" value="cancel" formnovalidate>Abbrechen</button><button class="button button-primary" type="submit">Öffnen</button></footer>
     </form>
   </dialog>
 
@@ -147,7 +147,7 @@
 
   <footer class="app-footer" aria-label="Versionsinformation">
   <span>Gerätemappe</span>
-  <span class="app-version">Version 1.4.1</span>
+  <span class="app-version">Version 1.4.2</span>
 </footer>
 
 <script src="/app.js"></script>
