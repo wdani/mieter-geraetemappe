@@ -1,9 +1,14 @@
-const CACHE_NAME = "geraetemappe-shell-v6";
+const CACHE_NAME = "geraetemappe-shell-v7";
 const APP_SHELL = [
   "/",
   "/index.html",
   "/styles.css",
+  "/v15.css",
   "/app.js",
+  "/v15-shell.js",
+  "/v15-core.js",
+  "/v15-qr-tools.js",
+  "/v15-backup-tools.js",
   "/manifest.webmanifest",
   "/icons/icon-192.png",
   "/icons/icon-512.png",

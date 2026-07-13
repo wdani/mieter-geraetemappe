@@ -14,29 +14,37 @@ export interface ManualDocument {
   note: string;
 }
 
+export interface ApartmentPage {
+  id: string;
+  label: string;
+}
+
+export interface ApartmentRename {
+  from: string;
+  to: string;
+}
+
 export interface LabelSet {
   categories: string[];
   apartments: string[];
 }
 
-export interface BackupPayload {
-  schema: "mieter-geraetemappe-backup";
-  version: number;
-  appVersion: string;
-  exportedAt: string;
-  labels: LabelSet;
-  documents: ManualDocument[];
-}
-
-export const APP_VERSION = "1.4.0";
+export const APP_VERSION = "1.5.0";
 export const STORE_NAME = "geraetemappe";
 export const DOCUMENTS_KEY = "documents";
 export const LABELS_KEY = "labels";
-export const LATEST_IMPORT_BACKUP_KEY = "backups/latest-before-import";
+export const APARTMENT_PAGES_KEY = "apartment-pages";
 
 const MAX_DOCUMENTS = 2000;
 const MAX_APARTMENTS_PER_DOCUMENT = 30;
 const MAX_LINKS_PER_DOCUMENT = 12;
+const GLOBAL_APARTMENT_LABELS = new Set([
+  "alle wohnungen",
+  "alle",
+  "allgemein",
+  "gesamte liegenschaft",
+  "ganze liegenschaft"
+]);
 
 function getStoreForContext() {
   const deployContext = Netlify.context?.deploy?.context;
@@ -79,6 +87,14 @@ export function uniqueLabels(values: unknown[]): string[] {
   return result.sort((a, b) => a.localeCompare(b, "de"));
 }
 
+export function sameLabel(left: unknown, right: unknown): boolean {
+  return cleanString(left, 100).toLocaleLowerCase("de") === cleanString(right, 100).toLocaleLowerCase("de");
+}
+
+export function isGlobalApartmentLabel(label: unknown): boolean {
+  return GLOBAL_APARTMENT_LABELS.has(cleanString(label, 100).toLocaleLowerCase("de"));
+}
+
 export function normalizeLinks(source: any): DocumentLink[] {
   const rawLinks = Array.isArray(source?.links)
     ? source.links
@@ -102,10 +118,6 @@ export function normalizeLinks(source: any): DocumentLink[] {
   return result;
 }
 
-/**
- * Ältere Einträge verwendeten ein einzelnes Feld `apartment` und `link`.
- * Beim Lesen werden beide Formate transparent migriert.
- */
 export function normalizeDocument(source: any): ManualDocument {
   let apartments: string[] = [];
 
@@ -162,15 +174,25 @@ export function deriveLabelSet(documents: ManualDocument[]): LabelSet {
   };
 }
 
-export function createBackupPayload(documents: ManualDocument[]): BackupPayload {
-  return {
-    schema: "mieter-geraetemappe-backup",
-    version: 3,
-    appVersion: APP_VERSION,
-    exportedAt: new Date().toISOString(),
-    labels: deriveLabelSet(documents),
-    documents
-  };
+export function normalizeApartmentPages(value: unknown): ApartmentPage[] {
+  if (!Array.isArray(value)) return [];
+  const ids = new Set<string>();
+  const labels = new Set<string>();
+  const pages: ApartmentPage[] = [];
+
+  for (const item of value) {
+    const source = item as Record<string, unknown>;
+    const id = cleanString(source?.id, 100);
+    const label = cleanString(source?.label, 100);
+    const labelKey = label.toLocaleLowerCase("de");
+    if (!/^[A-Za-z0-9_-]{1,100}$/.test(id) || !label || isGlobalApartmentLabel(label)) continue;
+    if (ids.has(id) || labels.has(labelKey)) continue;
+    ids.add(id);
+    labels.add(labelKey);
+    pages.push({ id, label });
+  }
+
+  return pages;
 }
 
 export async function readDocuments(): Promise<ManualDocument[]> {
@@ -179,19 +201,8 @@ export async function readDocuments(): Promise<ManualDocument[]> {
   return Array.isArray(rawDocuments) ? rawDocuments.map(normalizeDocument) : [];
 }
 
-export async function writeDocuments(documents: ManualDocument[]): Promise<LabelSet> {
+export async function readApartmentPages(): Promise<ApartmentPage[]> {
   const store = getDocumentStore();
-  const labels = deriveLabelSet(documents);
-  await Promise.all([
-    store.setJSON(DOCUMENTS_KEY, documents),
-    store.setJSON(LABELS_KEY, labels)
-  ]);
-  return labels;
-}
-
-export async function saveLatestImportSafetyBackup(documents: ManualDocument[]): Promise<BackupPayload> {
-  const backup = createBackupPayload(documents);
-  const store = getDocumentStore();
-  await store.setJSON(LATEST_IMPORT_BACKUP_KEY, backup);
-  return backup;
+  const rawPages = await store.get(APARTMENT_PAGES_KEY, { type: "json" }) as unknown;
+  return normalizeApartmentPages(rawPages);
 }
