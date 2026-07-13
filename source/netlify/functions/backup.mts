@@ -1,13 +1,13 @@
 import type { Config, Context } from "@netlify/functions";
 import {
-  createBackupPayload,
   deriveLabelSet,
   isAuthorized,
+  normalizeApartmentPages,
   readDocuments,
-  saveLatestImportSafetyBackup,
-  validateDocuments,
-  writeDocuments
+  validateDocuments
 } from "./_shared.mjs";
+import { ensureApartmentPages, writeDocuments } from "./apartment-lib.mjs";
+import { createBackupPayload, saveLatestImportSafetyBackup } from "./backup-lib.mjs";
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -21,7 +21,8 @@ export default async (request: Request, _context: Context) => {
 
   if (request.method === "GET") {
     const documents = await readDocuments();
-    const backup = createBackupPayload(documents);
+    const apartmentPages = await ensureApartmentPages(documents);
+    const backup = createBackupPayload(documents, apartmentPages, "manual", "download");
     const date = new Date().toISOString().replace(/[:.]/g, "-");
 
     return new Response(JSON.stringify(backup, null, 2), {
@@ -42,18 +43,20 @@ export default async (request: Request, _context: Context) => {
       return json({ error: "Ungültige Backup-Datei." }, 400);
     }
 
-    const source = body as { documents?: unknown };
+    const source = body as { documents?: unknown; apartmentPages?: unknown };
     const rawDocuments = Array.isArray(body) ? body : source?.documents;
     const documents = validateDocuments(rawDocuments);
     if (!documents) return json({ error: "Das Backup enthält ungültige Einträge." }, 400);
 
     const currentDocuments = await readDocuments();
     const safetyBackup = await saveLatestImportSafetyBackup(currentDocuments);
-    await writeDocuments(documents);
+    const preferredApartmentPages = normalizeApartmentPages(source?.apartmentPages);
+    const result = await writeDocuments(documents, { preferredApartmentPages });
 
     return json({
       documents,
       labels: deriveLabelSet(documents),
+      apartmentPages: result.apartmentPages,
       imported: documents.length,
       safetyBackupCreatedAt: safetyBackup.exportedAt
     });

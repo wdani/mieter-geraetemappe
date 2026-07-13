@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.5.0
+
+- Jede einzelne Wohnung beziehungsweise jeder Bereich erhält eine dauerhaft identifizierte Übersichtsseite unter `/wohnung/<ID>`.
+- Wohnungsseiten zeigen zugeordnete sowie allgemeine Einträge und bieten eine eigene Suche und Kategorienfilterung.
+- Im Verwaltungsmodus können Wohnungslinks geöffnet, kopiert und als QR-Code heruntergeladen werden.
+- QR-Codes von Einträgen und Wohnungsseiten können ausgewählt und als A4-PDF mit zehn beschrifteten Etiketten pro Seite exportiert werden.
+- Eine tägliche geplante Sicherung speichert den vollständigen Datenbestand; am ersten Tag eines Monats wird zusätzlich eine Monatssicherung erstellt.
+- Es werden bis zu 30 tägliche und 12 monatliche Sicherungen aufbewahrt.
+- Die Verwaltung enthält eine Backup-Übersicht mit manueller Sicherung, Download und Wiederherstellung.
+- Vor Wiederherstellungen, Backup-Importen und grösseren Löschaktionen wird automatisch eine Sicherheitskopie erstellt.
+- Wohnungs-IDs werden beim normalen Umbenennen eines Labels beibehalten, damit gedruckte QR-Codes gültig bleiben.
+- PWA-Cache und Versionsanzeige auf 1.5.0 aktualisiert.
+
 ## 1.4.2
 
 - X und „Abbrechen“ schliessen den Eintragsdialog wieder ohne die Pflichtfeldprüfung auszulösen.

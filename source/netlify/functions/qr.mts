@@ -1,6 +1,7 @@
 import QRCode from "qrcode";
 import type { Config, Context } from "@netlify/functions";
 import { readDocuments } from "./_shared.mjs";
+import { ensureApartmentPages } from "./apartment-lib.mjs";
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -14,13 +15,26 @@ export default async (request: Request, _context: Context) => {
 
   const requestUrl = new URL(request.url);
   const id = (requestUrl.searchParams.get("id") || "").trim();
-  if (!/^[A-Za-z0-9_-]{1,100}$/.test(id)) return json({ error: "Ungültige Eintrags-ID." }, 400);
+  const type = requestUrl.searchParams.get("type") === "apartment" ? "apartment" : "document";
+  if (!/^[A-Za-z0-9_-]{1,100}$/.test(id)) return json({ error: "Ungültige ID." }, 400);
 
   const documents = await readDocuments();
-  const document = documents.find((item) => item.id === id);
-  if (!document) return json({ error: "Eintrag nicht gefunden." }, 404);
+  let detailUrl = "";
+  let title = "";
 
-  const detailUrl = `${requestUrl.origin}/d/${encodeURIComponent(document.id)}`;
+  if (type === "apartment") {
+    const pages = await ensureApartmentPages(documents);
+    const page = pages.find((item) => item.id === id);
+    if (!page) return json({ error: "Wohnungsseite nicht gefunden." }, 404);
+    detailUrl = `${requestUrl.origin}/wohnung/${encodeURIComponent(page.id)}`;
+    title = page.label;
+  } else {
+    const document = documents.find((item) => item.id === id);
+    if (!document) return json({ error: "Eintrag nicht gefunden." }, 404);
+    detailUrl = `${requestUrl.origin}/d/${encodeURIComponent(document.id)}`;
+    title = document.title;
+  }
+
   const png = await QRCode.toBuffer(detailUrl, {
     type: "png",
     width: 1000,
@@ -29,14 +43,13 @@ export default async (request: Request, _context: Context) => {
     color: { dark: "#0F766EFF", light: "#FFFFFFFF" }
   });
 
-  const safeTitle = document.title
+  const safeTitle = title
     .replace(/[^A-Za-z0-9ÄÖÜäöüß_-]+/g, "-")
     .replace(/-+/g, "-")
     .slice(0, 80) || "Eintrag";
   const download = requestUrl.searchParams.get("download") === "1";
-  const body = Uint8Array.from(png);
 
-  return new Response(body, {
+  return new Response(png, {
     status: 200,
     headers: {
       "content-type": "image/png",

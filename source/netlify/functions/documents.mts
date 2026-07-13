@@ -5,10 +5,13 @@ import {
   getDocumentStore,
   isAuthorized,
   normalizeDocument,
+  readDocuments,
   validateDocuments,
-  writeDocuments,
+  type ApartmentRename,
   type ManualDocument
 } from "./_shared.mjs";
+import { ensureApartmentPages, writeDocuments } from "./apartment-lib.mjs";
+import { saveBackup } from "./backup-lib.mjs";
 
 const seedDocuments: ManualDocument[] = [
   {
@@ -24,7 +27,7 @@ const seedDocuments: ManualDocument[] = [
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "content-type": "application/json; charset=utf-8" }
+    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }
   });
 }
 
@@ -35,8 +38,8 @@ export default async (request: Request, _context: Context) => {
     const rawDocuments = await store.get(DOCUMENTS_KEY, { type: "json" }) as unknown[] | null;
 
     if (!rawDocuments) {
-      const labels = await writeDocuments(seedDocuments);
-      return json({ documents: seedDocuments, labels });
+      const result = await writeDocuments(seedDocuments);
+      return json({ documents: seedDocuments, ...result });
     }
 
     const documents = rawDocuments.map(normalizeDocument);
@@ -46,11 +49,13 @@ export default async (request: Request, _context: Context) => {
       return !Array.isArray(source.apartments) || !Array.isArray(source.links) || "link" in source;
     });
 
-    const labels = migrationNeeded
-      ? await writeDocuments(documents)
-      : deriveLabelSet(documents);
+    if (migrationNeeded) {
+      const result = await writeDocuments(documents);
+      return json({ documents, ...result });
+    }
 
-    return json({ documents, labels });
+    const apartmentPages = await ensureApartmentPages(documents);
+    return json({ documents, labels: deriveLabelSet(documents), apartmentPages });
   }
 
   if (request.method === "PUT") {
@@ -63,12 +68,25 @@ export default async (request: Request, _context: Context) => {
       return json({ error: "Ungültige JSON-Daten." }, 400);
     }
 
-    const source = body as { documents?: unknown };
+    const source = body as { documents?: unknown; apartmentRenames?: ApartmentRename[] };
     const documents = validateDocuments(source?.documents);
     if (!documents) return json({ error: "Die Eintragsliste ist ungültig." }, 400);
 
-    const labels = await writeDocuments(documents);
-    return json({ documents, labels });
+    const currentDocuments = await readDocuments();
+    const currentIds = new Set(currentDocuments.map((document) => document.id));
+    const nextIds = new Set(documents.map((document) => document.id));
+    const removedCount = [...currentIds].filter((id) => !nextIds.has(id)).length;
+    const destructive = removedCount >= 5 || (currentDocuments.length >= 4 && removedCount / currentDocuments.length >= 0.25);
+
+    if (destructive) {
+      await saveBackup("safety", "before-bulk-delete", currentDocuments);
+    }
+
+    const apartmentRenames = Array.isArray(source.apartmentRenames)
+      ? source.apartmentRenames.slice(0, 50)
+      : [];
+    const result = await writeDocuments(documents, { apartmentRenames });
+    return json({ documents, ...result, safetyBackupCreated: destructive });
   }
 
   return json({ error: "Methode nicht erlaubt." }, 405);
