@@ -61,3 +61,12 @@ async function restoreStoredBackupV15(key) {
 document.querySelector('#backupManagerButton').addEventListener('click', openBackupManagerV15);
 document.querySelector('#closeBackupManagerButton').addEventListener('click', () => document.querySelector('#backupManagerDialog').close());
 document.querySelector('#createBackupButton').addEventListener('click', createStoredBackupV15);
+
+const renderDetailRouteV15 = renderDetail;
+renderDetail = function renderDetailVisibilityV15() {
+  const route = requestedRouteV15();
+  document.querySelectorAll('.overview-only').forEach((element) => { element.hidden = Boolean(route); });
+  renderDetailRouteV15();
+};
+window.addEventListener('popstate', renderDetail);
+document.querySelector('#copyQrButton').addEventListener('click', copyQrLink);
