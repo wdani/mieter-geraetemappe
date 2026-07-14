@@ -1,5 +1,5 @@
 (() => {
-  document.querySelector('.app-version').textContent = 'Version 1.5.0';
+  document.querySelector('.app-version').textContent = 'Version 1.5.1';
 
   const tools = document.querySelector('.admin-tools');
   const anchor = document.querySelector('#labelManagerButton');
@@ -43,4 +43,8 @@
       <div class="dialog-content"><div class="manager-toolbar"><div><strong>Automatisch:</strong> 30 tägliche und 12 monatliche Sicherungen</div><button id="createBackupButton" class="button button-primary" type="button">Jetzt sichern</button></div><div id="backupList" class="managed-list"></div></div>
     </dialog>
   `);
+
+  const script = document.createElement('script');
+  script.src = '/v151-backup-tools.js';
+  document.body.appendChild(script);
 })();
