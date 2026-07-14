@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.5.1
+
+- Die doppelten Schaltflächen „Backup herunterladen“ und „Backup importieren“ wurden aus der Hauptübersicht entfernt.
+- Backup-Import, manuelle Sicherung, Download und Wiederherstellung befinden sich nun gemeinsam unter „Backups verwalten“.
+- Dropbox kann optional als unabhängiger zweiter Sicherungsort verbunden werden.
+- Die Dropbox-Verbindung erfolgt einmalig über die Gerätemappe; der Refresh Token wird nur serverseitig gespeichert.
+- Lokale tägliche, monatliche, manuelle und Sicherheitskopien werden bei aktiver Verbindung zusätzlich in den Dropbox-App-Ordner hochgeladen.
+- Die Aufbewahrung von 30 täglichen, 12 monatlichen, 20 manuellen und 50 Sicherheitskopien wird auch in Dropbox automatisch durchgesetzt.
+- Der Backup-Bereich zeigt Verbindungsstatus, letzte erfolgreiche Übertragung und Fehler an.
+- Dropbox kann im Backup-Bereich getestet und wieder getrennt werden.
+- Ein Dropbox-Fehler verhindert niemals die lokale Sicherung.
+- PWA-Cache und Versionsanzeige auf 1.5.1 aktualisiert.
+
 ## 1.5.0
 
 - Jede einzelne Wohnung beziehungsweise jeder Bereich erhält eine dauerhaft identifizierte Übersichtsseite unter `/wohnung/<ID>`.
