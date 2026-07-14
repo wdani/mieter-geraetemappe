@@ -2,7 +2,7 @@
 
 Digitale Informationsmappe für Mietwohnungen und Liegenschaften. Sie verwaltet datenschutzfreundliche Inhalte wie Geräteanleitungen, Farb- und Materialangaben, Pflegehinweise, technische Informationen und allgemeine Kontakte.
 
-## Aktueller Stand: Version 1.5.0
+## Aktueller Stand: Version 1.5.1
 
 - zentrale Eintragsliste über Netlify Blobs
 - geschützte Verwaltung über `ADMIN_PASSWORD`
@@ -10,17 +10,16 @@ Digitale Informationsmappe für Mietwohnungen und Liegenschaften. Sie verwaltet 
 - dauerhafte Detailseiten unter `/d/<ID>`
 - QR-Code-Vorschau und PNG-Download pro Eintrag
 - Excel-Export als `.xlsx`
-- vollständiger Backup-Download und Backup-Import als JSON
 - reine Notiz- und Informationseinträge ohne externen Link
-- mehrere beschriftete Links pro Eintrag, etwa Anleitung, technische Beschreibung oder Video
+- mehrere beschriftete Links pro Eintrag
 - verwaltbare Kategorie- und Wohnungs-/Bereichs-Labels
 - Zuordnung eines Eintrags zu mehreren Wohnungen oder Bereichen
-- Einträge können im Verwaltungsmodus dupliziert werden
 - eigene Übersichtsseite mit dauerhaftem QR-Code pro Wohnung oder Bereich
 - QR-Druckbogen als A4-PDF mit zehn beschrifteten Etiketten pro Seite
 - tägliche automatische Sicherung mit 30 aufbewahrten Tagesständen
 - zusätzliche monatliche Sicherung mit 12 aufbewahrten Monatsständen
-- Backup-Übersicht mit Download und Wiederherstellung
+- zentrale Backup-Verwaltung mit Import, Download und Wiederherstellung
+- optionale Dropbox-Zweitsicherung mit automatischer Aufbewahrung
 - automatische Sicherheitskopien vor Importen, Wiederherstellungen und grösseren Löschaktionen
 
 ## Datenprinzip
@@ -36,7 +35,18 @@ Ein Eintrag kann beispielsweise enthalten:
 - optional mehrere beschriftete HTTPS-Links
 - stabile ID für QR-Codes
 
-Labels werden nicht dauerhaft als ungenutzte Auswahlliste geführt. Die Anwendung leitet die verfügbaren Kategorien und Wohnungen/Bereiche aus den tatsächlich gespeicherten Einträgen ab. Wird ein Label nirgends mehr verwendet, wird es beim nächsten Speichern automatisch entfernt.
+## Backups
+
+Die Gerätemappe hält weiterhin ihre eigenen täglichen, monatlichen, manuellen und Sicherheitskopien vor. Dropbox ist nur ein optionaler zweiter Sicherungsort.
+
+Ist Dropbox verbunden, werden neue Sicherungen zusätzlich in den eigenen Dropbox-App-Ordner kopiert. Die Gerätemappe löscht ältere Dropbox-Dateien selbstständig nach denselben Aufbewahrungsregeln:
+
+- 30 tägliche Sicherungen
+- 12 monatliche Sicherungen
+- 20 manuelle Sicherungen
+- 50 Sicherheitskopien
+
+Ein Dropbox-Fehler verhindert niemals die lokale Sicherung. Einrichtung und Berechtigungen sind in [`docs/DROPBOX_SETUP.md`](docs/DROPBOX_SETUP.md) beschrieben.
 
 ## Wohnungsseiten
 
@@ -76,8 +86,6 @@ npm run check
 npm run dev
 ```
 
-Die Icons werden beim Build aus `assets/app-icon.svg` erzeugt. Die lokale Entwicklung verwendet eine von der produktiven Umgebung getrennte Laufzeitumgebung.
-
 ## Deployment
 
 Das Projekt ist für automatisierte Deployments vorbereitet:
@@ -85,9 +93,10 @@ Das Projekt ist für automatisierte Deployments vorbereitet:
 - Build-Befehl: `npm run build`
 - Publish-Verzeichnis: `public`
 - Functions-Verzeichnis: `netlify/functions`
-- benötigte Environment-Variable: `ADMIN_PASSWORD`
+- benötigte Variable: `ADMIN_PASSWORD`
+- optionale Dropbox-Variablen: `DROPBOX_APP_KEY`, `DROPBOX_APP_SECRET`, `DROPBOX_BACKUP_PATH`
 
-Produktive Einträge bleiben im Laufzeitspeicher und werden nicht Teil des Git-Repositorys.
+Produktive Einträge und der nach der Dropbox-Anmeldung erhaltene Refresh Token bleiben im Laufzeitspeicher und werden nicht Teil des Git-Repositorys.
 
 ## QR-Prinzip
 
@@ -103,8 +112,8 @@ Wohnungsübersichten verwenden:
 /wohnung/<ID>
 ```
 
-Die hinterlegten Dokument-Links können später geändert oder erweitert werden, ohne den gedruckten QR-Code ersetzen zu müssen. Reine Informationseinträge funktionieren ebenfalls ohne externen Link.
+Die hinterlegten Dokument-Links können später geändert oder erweitert werden, ohne den gedruckten QR-Code ersetzen zu müssen.
 
 ## Weiterentwicklung
 
-Weitere mögliche Ausbauschritte stehen in [ROADMAP.md](ROADMAP.md). Detaillierte Konzepte für Excel-Import, Änderungsverlauf und Sicherungen befinden sich unter [`docs/`](docs/).
+Weitere mögliche Ausbauschritte stehen in [ROADMAP.md](ROADMAP.md). Detaillierte Konzepte befinden sich unter [`docs/`](docs/).
