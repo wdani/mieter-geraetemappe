@@ -9,12 +9,19 @@ dialog > header { display: flex; align-items: start; justify-content: space-betw
 .dialog-content section + section { margin-top: 24px; }
 .dialog-content h3 { margin: 0 0 10px; }
 .manager-note { margin: 0 0 18px; color: var(--muted); line-height: 1.55; }
+.manager-subtext { display: block; margin-top: 5px; color: var(--muted); font-weight: 500; }
 .managed-list { display: grid; gap: 10px; }
 .managed-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px; border: 1px solid var(--line); border-radius: 15px; background: var(--surface); }
 .managed-row strong, .managed-row small { display: block; }
 .managed-row small { margin-top: 4px; color: var(--muted); }
 .managed-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
-.manager-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+.manager-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
+.manager-toolbar-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.dropbox-status-panel { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 0 18px; padding: 15px; border: 1px solid var(--line); border-radius: 16px; background: #f7faf9; }
+.dropbox-status-panel p { margin: 5px 0 0; color: var(--muted); line-height: 1.45; overflow-wrap: anywhere; }
+.dropbox-status-panel.dropbox-connected { border-color: #9bcfc8; background: #edf8f6; }
+.dropbox-status-panel.dropbox-error { border-color: #efb0aa; background: #fff4f2; }
+.dropbox-status-panel.dropbox-error p { color: #8f2d24; }
 .sheet-toolbar { display: grid; grid-template-columns: repeat(2, minmax(160px, 1fr)) auto auto; gap: 10px; margin-bottom: 18px; }
 .sheet-toolbar select { min-height: 44px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: white; }
 .choice-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
@@ -30,8 +37,8 @@ dialog > header { display: flex; align-items: start; justify-content: space-betw
 }
 @media (max-width: 680px) {
   .apartment-page-toolbar, .sheet-toolbar { grid-template-columns: 1fr; }
-  .managed-row { align-items: flex-start; flex-direction: column; }
-  .managed-actions { width: 100%; justify-content: stretch; }
-  .managed-actions .button { flex: 1; }
+  .managed-row, .dropbox-status-panel { align-items: flex-start; flex-direction: column; }
+  .managed-actions, .manager-toolbar-actions { width: 100%; justify-content: stretch; }
+  .managed-actions .button, .manager-toolbar-actions .button { flex: 1; }
   .sticky-dialog-footer { bottom: -18px; margin: 18px -18px -18px; padding: 12px 18px; }
 }
