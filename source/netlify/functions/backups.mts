@@ -2,12 +2,20 @@ import type { Config, Context } from "@netlify/functions";
 import { getDocumentStore, isAuthorized, readApartmentPages, readDocuments } from "./_shared.mjs";
 import { writeDocuments } from "./apartment-lib.mjs";
 import { listBackups, readBackup, saveBackup } from "./backup-lib.mjs";
+import { getDropboxStatus, testDropboxConnection } from "./dropbox-lib.mjs";
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
     headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }
   });
+}
+
+async function overview() {
+  return {
+    backups: await listBackups(),
+    dropbox: await getDropboxStatus()
+  };
 }
 
 export default async (request: Request, _context: Context) => {
@@ -28,14 +36,32 @@ export default async (request: Request, _context: Context) => {
         }
       });
     }
-    return json({ backups: await listBackups() });
+    return json(await overview());
   }
 
   if (request.method === "POST") {
+    let action = "";
+    if ((request.headers.get("content-type") || "").includes("application/json")) {
+      try {
+        const body = await request.json() as { action?: string };
+        action = typeof body?.action === "string" ? body.action : "";
+      } catch {}
+    }
+
+    if (action === "test-dropbox") {
+      const dropbox = await testDropboxConnection();
+      return json({ backups: await listBackups(), dropbox });
+    }
+
     const documents = await readDocuments();
     const apartmentPages = await readApartmentPages();
     const created = await saveBackup("manual", "manual", documents, apartmentPages);
-    return json({ key: created.key, backup: created.backup, backups: await listBackups() }, 201);
+    return json({
+      key: created.key,
+      backup: created.backup,
+      backups: await listBackups(),
+      dropbox: created.dropbox
+    }, 201);
   }
 
   if (request.method === "PUT") {
@@ -59,7 +85,7 @@ export default async (request: Request, _context: Context) => {
       documents: backup.documents,
       labels: result.labels,
       apartmentPages: result.apartmentPages,
-      backups: await listBackups()
+      ...(await overview())
     });
   }
 
@@ -71,7 +97,7 @@ export default async (request: Request, _context: Context) => {
       return json({ error: "Automatische Sicherungen werden über die Aufbewahrungsregel entfernt." }, 400);
     }
     await getDocumentStore().delete(key);
-    return json({ backups: await listBackups() });
+    return json(await overview());
   }
 
   return json({ error: "Methode nicht erlaubt." }, 405);
