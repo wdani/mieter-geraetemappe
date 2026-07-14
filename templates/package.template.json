@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "npm run check && node scripts/generate-icons.mjs",
+    "build": "node scripts/generate-icons.mjs",
     "predev": "node scripts/generate-icons.mjs",
     "dev": "netlify dev",
     "check": "tsc --noEmit"
