@@ -11,6 +11,7 @@ import {
   type ManualDocument
 } from "./_shared.mjs";
 import { ensureApartmentPages } from "./apartment-lib.mjs";
+import { mirrorBackupToDropbox, type DropboxBackupStatus } from "./dropbox-lib.mjs";
 
 export type BackupType = "daily" | "monthly" | "manual" | "safety";
 
@@ -33,6 +34,12 @@ export interface BackupSummary {
   createdAt: string;
   documentCount: number;
   apartmentCount: number;
+}
+
+export interface SavedBackupResult {
+  key: string;
+  backup: BackupPayload;
+  dropbox: DropboxBackupStatus;
 }
 
 const BACKUP_PREFIX = "backups/";
@@ -81,7 +88,7 @@ export async function saveBackup(
   reason: string,
   documents?: ManualDocument[],
   apartmentPages?: ApartmentPage[]
-): Promise<{ key: string; backup: BackupPayload }> {
+): Promise<SavedBackupResult> {
   const store = getDocumentStore();
   const currentDocuments = documents || await readDocuments();
   const currentPages = apartmentPages?.length ? apartmentPages : await ensureApartmentPages(currentDocuments);
@@ -92,7 +99,8 @@ export async function saveBackup(
 
   const retention = type === "daily" ? 30 : type === "monthly" ? 12 : type === "manual" ? 20 : 50;
   await pruneBackups(`${BACKUP_PREFIX}${type}/`, retention);
-  return { key, backup };
+  const dropbox = await mirrorBackupToDropbox(type, key, backup);
+  return { key, backup, dropbox };
 }
 
 export async function saveLatestImportSafetyBackup(documents: ManualDocument[]): Promise<BackupPayload> {
