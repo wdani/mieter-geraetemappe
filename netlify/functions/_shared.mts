@@ -29,7 +29,7 @@ export interface LabelSet {
   apartments: string[];
 }
 
-export const APP_VERSION = "1.5.0";
+export const APP_VERSION = "1.5.1";
 export const STORE_NAME = "geraetemappe";
 export const DOCUMENTS_KEY = "documents";
 export const LABELS_KEY = "labels";

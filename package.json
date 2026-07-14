@@ -1,10 +1,10 @@
 {
   "name": "mieter-geraetemappe",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node scripts/generate-icons.mjs",
+    "build": "npm run check && node scripts/generate-icons.mjs",
     "predev": "node scripts/generate-icons.mjs",
     "dev": "netlify dev",
     "check": "tsc --noEmit"
