@@ -1,4 +1,4 @@
-const CACHE_NAME = "geraetemappe-shell-v7";
+const CACHE_NAME = "geraetemappe-shell-v8";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -9,6 +9,7 @@ const APP_SHELL = [
   "/v15-core.js",
   "/v15-qr-tools.js",
   "/v15-backup-tools.js",
+  "/v151-backup-tools.js",
   "/manifest.webmanifest",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
